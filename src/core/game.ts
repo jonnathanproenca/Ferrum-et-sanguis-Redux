@@ -411,7 +411,7 @@ export function arenaPorId(id: string): Arena {
  * (por enquanto com os golpes do Trácio, até existir a folha de sprites de duas espadas).
  */
 export const FINAIS: Lanista[] = [
-  { id: 'batiatus', nome: 'Lêntulo Batiatus', especialidade: 'tracio', titulo: 'O lanista de Cápua', historia: 'Dono do ludus mais temido da Campânia. Só aceita enfrentar quem já provou valor.' },
+  { id: 'batiatus', nome: 'Lêntulo Batiatus', especialidade: 'dimachaerus', titulo: 'O lanista de Cápua', historia: 'Dono do ludus mais temido da Campânia. Só aceita enfrentar quem já provou valor.' },
 ];
 export const NOME_CAMPEAO_FINAL = 'Espártaco';
 

@@ -35,5 +35,14 @@
     "passivaNome": "Couraça",
     "passivaDescricao": "Reduz 2 do dano recebido.",
     "stats": { "forca": 9, "agilidade": 8, "vitalidade": 10, "sorte": 6 }
+  },
+  "dimachaerus": {
+    "nome": "Dimachaerus",
+    "papel": "ofensivo",
+    "descricao": "Duas espadas, sem escudo. O estilo de Espártaco: implacável no ataque.",
+    "passiva": "sequencia",
+    "passivaNome": "Duas lâminas",
+    "passivaDescricao": "15% de chance de golpear duas vezes na mesma rodada.",
+    "stats": { "forca": 11, "agilidade": 11, "vitalidade": 8, "sorte": 6 }
   }
 }

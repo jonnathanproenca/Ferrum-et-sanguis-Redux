@@ -743,7 +743,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     return `<section class="camp">${cabeca}${trilha}${palco}
       <article class="camp-duelo ${d.passo.regra.letal ? 'nemesis' : ''}">
         <div class="camp-lados">
-          <div class="camp-lado rival"><div class="camp-lutador">${misterio ? '<span class="camp-misterio">?</span>' : gladiadorImg(rival)}${misterio ? '' : `<span>${esc(final ? rival.nome : d.lanista.nome)}</span>`}</div>${final && !misterio ? `<small>campeão de ${esc(d.lanista.nome)}</small>` : ''}${formato > 1 ? '<small>e um companheiro</small>' : ''}</div>
+          <div class="camp-lado rival"><div class="camp-lutador">${misterio ? `<img class="gladiador-img sprite-card camp-sombra" src="${SPRITES_CLASSE.dimachaerus!.quadros.guarda!.arquivo}" alt="Gladiador desconhecido" draggable="false">` : gladiadorImg(rival)}${misterio ? '' : `<span>${esc(final ? rival.nome : d.lanista.nome)}</span>`}</div>${final && !misterio ? `<small>campeão de ${esc(d.lanista.nome)}</small>` : ''}${formato > 1 ? '<small>e um companheiro</small>' : ''}</div>
           <div class="camp-vs">VS<small>${formato}×${formato}</small></div>
           <div class="camp-lado">${time}</div>
         </div>

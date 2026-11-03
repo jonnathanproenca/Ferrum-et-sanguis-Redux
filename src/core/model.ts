@@ -4,7 +4,7 @@ import classesJson from '../data/classes.json';
 import itensJson from '../data/itens.json';
 import origensJson from '../data/origens.json';
 
-export type ClasseId = 'murmilo' | 'retiario' | 'tracio' | 'samnita';
+export type ClasseId = 'murmilo' | 'retiario' | 'tracio' | 'samnita' | 'dimachaerus';
 export type Atributo = keyof Stats;
 export type OrigemTipo = 'escravo' | 'livre';
 export type Slot = 'arma' | 'acessorio' | 'elmo' | 'peito' | 'pe' | 'calca';
@@ -84,12 +84,12 @@ export const comQualidade = (base: string, q: number): string => (q > 0 ? `${bas
 export const qualidadeDe = (id: string | null): number => (id ? separarId(id).qualidade : 0);
 
 const NOME_BASICO: Record<Slot, Record<ClasseId, string>> = {
-  arma: { murmilo: 'Gládio simples', retiario: 'Tridente simples', tracio: 'Sica simples', samnita: 'Gládio simples' },
-  acessorio: { murmilo: 'Escudo simples', retiario: 'Rede simples', tracio: 'Escudo pequeno simples', samnita: 'Escudo simples' },
-  elmo: { murmilo: 'Elmo simples', retiario: 'Galero simples', tracio: 'Capacete simples', samnita: 'Elmo simples' },
-  peito: { murmilo: 'Peitoral simples', retiario: 'Peitoral de couro simples', tracio: 'Peitoral de couro simples', samnita: 'Peitoral simples' },
-  pe: { murmilo: 'Botas simples', retiario: 'Sandálias simples', tracio: 'Sandálias simples', samnita: 'Botas simples' },
-  calca: { murmilo: 'Perneira simples', retiario: 'Faixa simples', tracio: 'Faixa simples', samnita: 'Perneira simples' },
+  arma: { murmilo: 'Gládio simples', retiario: 'Tridente simples', tracio: 'Sica simples', samnita: 'Gládio simples', dimachaerus: 'Gládios simples' },
+  acessorio: { murmilo: 'Escudo simples', retiario: 'Rede simples', tracio: 'Escudo pequeno simples', samnita: 'Escudo simples', dimachaerus: 'Manica simples' },
+  elmo: { murmilo: 'Elmo simples', retiario: 'Galero simples', tracio: 'Capacete simples', samnita: 'Elmo simples', dimachaerus: 'Faixa de cabelo simples' },
+  peito: { murmilo: 'Peitoral simples', retiario: 'Peitoral de couro simples', tracio: 'Peitoral de couro simples', samnita: 'Peitoral simples', dimachaerus: 'Correias simples' },
+  pe: { murmilo: 'Botas simples', retiario: 'Sandálias simples', tracio: 'Sandálias simples', samnita: 'Botas simples', dimachaerus: 'Sandálias simples' },
+  calca: { murmilo: 'Perneira simples', retiario: 'Faixa simples', tracio: 'Faixa simples', samnita: 'Perneira simples', dimachaerus: 'Faixa simples' },
 };
 
 function itemBasico(slot: Slot, classe: ClasseId): ItemBase {
@@ -108,7 +108,7 @@ export function itemPorId(id: string): Item {
   const { base, qualidade } = separarId(id);
   let item: ItemBase | undefined = ITENS.find((i) => i.id === base);
   if (!item) {
-    const m = /^basico_(\w+?)_(murmilo|retiario|tracio|samnita)$/.exec(base);
+    const m = /^basico_(\w+?)_(murmilo|retiario|tracio|samnita|dimachaerus)$/.exec(base);
     if (m && SLOTS.includes(m[1] as Slot)) item = itemBasico(m[1] as Slot, m[2] as ClasseId);
   }
   if (!item) throw new Error('Item inexistente.');

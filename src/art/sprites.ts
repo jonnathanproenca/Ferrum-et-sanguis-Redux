@@ -21,6 +21,22 @@ export interface ConjuntoSprites {
 }
 
 export const SPRITES_CLASSE: Partial<Record<string, ConjuntoSprites>> = {
+  dimachaerus: {
+    alturaGuarda: 231,
+    quadros: {
+      guarda: { arquivo: 'assets/gladiadores/dimachaerus/guarda.png', w: 173, h: 231, ax: 72.8, ay: 230.0 },
+      prepara: { arquivo: 'assets/gladiadores/dimachaerus/prepara.png', w: 166, h: 248, ax: 80.8, ay: 247.0 },
+      impacto: { arquivo: 'assets/gladiadores/dimachaerus/impacto.png', w: 229, h: 224, ax: 77.0, ay: 223.0 },
+      recupera: { arquivo: 'assets/gladiadores/dimachaerus/recupera.png', w: 203, h: 222, ax: 80.7, ay: 221.0 },
+      alt: { arquivo: 'assets/gladiadores/dimachaerus/alt.png', w: 159, h: 247, ax: 78.1, ay: 246.0 },
+      defende: { arquivo: 'assets/gladiadores/dimachaerus/defende.png', w: 181, h: 231, ax: 68.2, ay: 230.0 },
+      dano: { arquivo: 'assets/gladiadores/dimachaerus/dano.png', w: 180, h: 203, ax: 76.4, ay: 202.0 },
+      critico: { arquivo: 'assets/gladiadores/dimachaerus/critico.png', w: 242, h: 244, ax: 96.2, ay: 243.0 },
+      cai: { arquivo: 'assets/gladiadores/dimachaerus/cai.png', w: 203, h: 195, ax: 101.5, ay: 194.0 },
+      morto: { arquivo: 'assets/gladiadores/dimachaerus/morto.png', w: 250, h: 99, ax: 125.0, ay: 98.0 },
+      respira: { arquivo: 'assets/gladiadores/dimachaerus/respira.png', w: 173, h: 224, ax: 72.8, ay: 223.0 },
+    },
+  },
   murmilo: {
     alturaGuarda: 243,
     quadros: {

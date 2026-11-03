@@ -19,6 +19,7 @@ export const VARIANTES_COR: VarianteCor[] = [
 
 /** Variante estável para um gladiador (mesmo id, mesma cor, em qualquer luta). */
 export function varianteDe(id: string): number {
+  if (id === "campeao-batiatus") return 0;
   let h = 2166136261;
   for (let i = 0; i < id.length; i++) {
     h ^= id.charCodeAt(i);
