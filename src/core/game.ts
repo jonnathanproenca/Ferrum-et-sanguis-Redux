@@ -180,6 +180,8 @@ export interface Estado {
   escolhaLanista?: string | null;
   /** Tópicos do tutorial já vistos. Ausente em saves antigos. */
   tutorial?: { vistos: string[] };
+  /** Cheat mode (destravado na seleção de lanista): ajuda para testar as funções sem jogar. */
+  cheats?: Partial<Cheats>;
   log: string[];
 }
 
@@ -211,6 +213,25 @@ export const REGRAS: Record<Dificuldade, RegrasDificuldade> = {
     resumo: 'Campeão com 6 vitórias, lenda com 15. Libertado após 30 lutas como lenda. Preços +25%, rivais mais fortes.' },
   extremo: { nome: 'Extremo', campeao: 15, lenda: 45, liberdade: 5, precos: 1.6, arenaBase: 1.25, arenaFator: 1.6,
     resumo: 'Campeão com 15 vitórias, lenda com 45. Libertado após só 5 lutas como lenda. Preços +60%, rivais brutais.' },
+};
+
+export interface Cheats {
+  ouro: boolean;
+  vida: boolean;
+  vencer: boolean;
+  pular: boolean;
+  lendario: boolean;
+  energia: boolean;
+  round: boolean;
+}
+export const CHEATS_NOMES: Record<keyof Cheats, string> = {
+  ouro: 'Dinheiro infinito',
+  vida: 'Vida infinita (ninguém morre nem fica ferido)',
+  vencer: 'Ganhar toda luta automaticamente',
+  pular: 'Pular luta sem perder recompensa',
+  lendario: '100% itens lendários no armeiro',
+  energia: 'Energia infinita',
+  round: 'Pular rodada sem gastar energia',
 };
 
 /** A dificuldade é escolhida ao criar o ludus e não muda. Saves antigos jogam no Médio. */
@@ -307,10 +328,11 @@ function exigirVivo(g: Gladiador): void {
 
 /** Confere energia e ouro antes de gastar qualquer um dos dois. */
 function pagar(e: Estado, energia: number, ouro: number): void {
-  if (e.energia < energia) throw new Error('Energia insuficiente neste turno.');
-  if (e.ouro < ouro) throw new Error('Ouro insuficiente.');
-  e.energia -= energia;
-  e.ouro -= ouro;
+  const c = e.cheats ?? {};
+  if (!c.energia && e.energia < energia) throw new Error('Energia insuficiente neste turno.');
+  if (!c.ouro && e.ouro < ouro) throw new Error('Ouro insuficiente.');
+  if (!c.energia) e.energia -= energia;
+  if (!c.ouro) e.ouro -= ouro;
 }
 
 /** Bônus da casa do jogador, se for do tipo pedido. */
@@ -493,7 +515,7 @@ export function sortearQualidadesMestre(proximo: () => number, n = PECAS_MESTRE)
 export function gerarArmeiroMestre(e: Estado): void {
   const rng = proximoRng(e);
   const pool = ITENS.filter((i) => !i.basico).map((i) => i.id);
-  const qualidades = sortearQualidadesMestre(() => rng.next());
+  const qualidades = e.cheats?.lendario ? Array<number>(PECAS_MESTRE).fill(QUALIDADE_MAX) : sortearQualidadesMestre(() => rng.next());
   const oferta: string[] = [];
   for (const q of qualidades) {
     let base = pool[rng.int(0, pool.length - 1)];
@@ -529,7 +551,7 @@ export function gameOver(e: Estado): boolean {
 }
 
 export function avancarTurno(e: Estado): void {
-  if (podeGastarEnergia(e)) {
+  if (!e.cheats?.round && podeGastarEnergia(e)) {
     throw new Error(`Gaste toda a energia antes de encerrar a rodada (restam ${e.energia}): lute nas arenas, treine ou troque de estilo.`);
   }
   e.turno += 1;
@@ -746,18 +768,22 @@ const nomes = (lista: Gladiador[]): string => lista.map((g) => g.nome).join(' e 
 
 function disputar(e: Estado, d: Disputa): PayloadLuta {
   const casa = lanistaDaCasa(e);
-  const fa = d.ladoA.map((g) => paraLutador(g, casa.especialidade, extraDaCasa(e)));
+  const ch = e.cheats ?? {};
+  const forte: Partial<Stats> = ch.vencer ? { forca: 80, agilidade: 80, vitalidade: 300, sorte: 80 } : ch.vida ? { vitalidade: 300 } : {};
+  const extraA = { ...extraDaCasa(e) };
+  for (const a of ATRIBUTOS) if (forte[a]) extraA[a] = (extraA[a] ?? 0) + (forte[a] as number);
+  const fa = d.ladoA.map((g) => paraLutador(g, casa.especialidade, extraA));
   const fb = d.ladoB.map((g) => paraLutador(g, d.especialidadeB, d.bonusB));
   const r = simularEquipes(fa, fb, d.rng.int(1, 2147483646), {
     efeitosPoco: d.poco,
     rendicao: d.mortal ? undefined : RENDICAO_PADRAO,
   });
-  const vitoria = r.vencedorLado === 'A';
+  const vitoria = ch.vencer ? true : r.vencedorLado === 'A';
 
   const efeitosNovos: string[] = [];
-  if (d.poco) for (const g of d.ladoA) efeitosNovos.push(...aplicarEfeitos(g, r.efeitosAplicados));
+  if (d.poco && !ch.vida) for (const g of d.ladoA) efeitosNovos.push(...aplicarEfeitos(g, r.efeitosAplicados));
 
-  const caidos = new Set(r.eventos.filter((ev) => ev.tipo === 'morte').map((ev) => ev.alvo));
+  const caidos = new Set(ch.vida || ch.vencer ? [] : r.eventos.filter((ev) => ev.tipo === 'morte').map((ev) => ev.alvo));
   for (const g of d.ladoA) if (caidos.has(g.id)) g.vivo = false;
 
   const detalhes: string[] = [];
@@ -884,7 +910,7 @@ export function lutarArena(e: Estado, gladIds: string[], arenaId: string): Paylo
 /** Pular a luta: o resultado vale, mas a recompensa em ouro cai 10%. Devolve o ouro descontado. */
 export const PENALIDADE_PULO = 0.1;
 export function pularLuta(e: Estado, payload: PayloadLuta): number {
-  const perda = payload.vitoriaA ? Math.round(payload.ouro * PENALIDADE_PULO) : 0;
+  const perda = payload.vitoriaA && !e.cheats?.pular ? Math.round(payload.ouro * PENALIDADE_PULO) : 0;
   e.ouro = Math.max(0, e.ouro - perda);
   registrar(e, perda > 0 ? `Luta pulada: −${perda} de ouro na recompensa (10%).` : 'Luta pulada.');
   return perda;

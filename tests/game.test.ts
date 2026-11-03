@@ -809,3 +809,36 @@ describe('campeão por vitórias, arenas por fama e dificuldade', () => {
     expect(multiplicadorArena(arenaPorId('coliseu'))).toBeCloseTo(1.5);
   });
 });
+
+describe('cheat mode', () => {
+  it('ouro e energia infinitos não gastam; vencer e vida infinita garantem vitória sem mortes', () => {
+    const e = novoJogo(120);
+    e.cheats = { ouro: true, energia: true, vencer: true, vida: true };
+    e.ouro = 10;
+    e.energia = 1;
+    const g = e.gladiadores[0];
+    for (let i = 0; i < 6; i++) {
+      const r = lutarArena(e, [g.id], 'pompeia');
+      expect(r.vitoriaA).toBe(true);
+      expect(g.vivo).toBe(true);
+    }
+    expect(e.energia).toBe(1);
+  });
+
+  it('pular rodada sem gastar energia e pular luta sem perda', () => {
+    const e = novoJogo(121);
+    expect(() => avancarTurno(e)).toThrow(/energia/i);
+    e.cheats = { round: true, pular: true };
+    expect(() => avancarTurno(e)).not.toThrow();
+    const antes = e.ouro;
+    expect(pularLuta(e, { vitoriaA: true, ouro: 50 } as never)).toBe(0);
+    expect(e.ouro).toBe(antes);
+  });
+
+  it('armeiro 100% lendário com o cheat', () => {
+    const e = novoJogo(122);
+    e.cheats = { lendario: true };
+    gerarArmeiroMestre(e);
+    for (const id of e.armeiroMestre as string[]) expect(itemPorId(id).qualidade).toBe(4);
+  });
+});

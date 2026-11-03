@@ -9,7 +9,7 @@
 
 export type Efeito =
   | 'clique' | 'golpe' | 'critico' | 'esquiva' | 'bloqueio' | 'morte' | 'efeito' | 'atordoado'
-  | 'moeda' | 'madeira' | 'parede' | 'recrutar' | 'vitoria' | 'derrota' | 'lenda' | 'liberdade' | 'erro';
+  | 'cheat' | 'moeda' | 'madeira' | 'parede' | 'recrutar' | 'vitoria' | 'derrota' | 'lenda' | 'liberdade' | 'erro';
 
 export interface Prefs {
   ativo: boolean;
@@ -291,6 +291,7 @@ class Motor {
       if (!r.ok || (r.headers.get('content-type') ?? '').includes('html')) return;
       const lista = (await r.json()) as string[];
       for (const arq of lista) this.manifesto.set(arq.replace(/\.[^.]+$/, ''), `${base}assets/audio/${arq}`);
+      for (const k of this.manifesto.keys()) if (k.startsWith('sfx/')) this.obter(k);
       this.efetiva = '';
       this.tocarTrilha(this.desejada);
       this.aplicarCena();

@@ -46,6 +46,8 @@ import {
   arenaLiberada,
   multiplicadorArena,
   regrasDe,
+  CHEATS_NOMES,
+  type Cheats,
   precoItem,
   REGRAS,
   DIFICULDADES_ORDEM,
@@ -84,7 +86,7 @@ import {
 } from '../core/model';
 import type { Stats, TipoEfeito } from '../core/combat';
 
-type Aba = 'ludus' | 'upgrades' | 'mercado' | 'armeiro' | 'enfermaria' | 'arenas' | 'campanha' | 'config';
+type Aba = 'ludus' | 'upgrades' | 'mercado' | 'armeiro' | 'enfermaria' | 'arenas' | 'campanha' | 'config' | 'cheat';
 
 const ABAS: [Aba, string][] = [
   ['ludus', 'Ludus'],
@@ -147,6 +149,16 @@ function nomeOrigem(g: Gladiador): string {
   return g.origem === 'livre' ? 'Livre' : 'Escravo';
 }
 
+const CHAVE_CHEAT = 'ferrum-et-sanguis:cheat';
+const CHAVE_CHEATS = 'ferrum-et-sanguis:cheats';
+const TOQUES_CHEAT = 25;
+function cheatLiberado(): boolean {
+  try { return localStorage.getItem(CHAVE_CHEAT) === '1'; } catch { return false; }
+}
+function cheatsSalvos(): Partial<Cheats> {
+  try { return JSON.parse(localStorage.getItem(CHAVE_CHEATS) ?? '{}') as Partial<Cheats>; } catch { return {}; }
+}
+
 /**
  * Monta a interface dentro de `raiz`. A UI guarda só o que precisa para desenhar;
  * o estado da partida vive em `e` e é salvo após cada ação.
@@ -163,6 +175,8 @@ export function montarUi(raiz: HTMLElement, opcoes: {
   let aviso = '';
   /** Tópico do tutorial aberto e a página atual. */
   let tut: { id: string; pag: number } | null = null;
+  let toquesCheat = 0;
+  let cheatRecemLiberado = false;
   let equipe: string[] = [];
   const abertos = new Set<string>();
 
@@ -734,6 +748,18 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       ${seletorEquipe(s, `Escalação (${formato} contra ${formato})`, formato)}</section>`;
   }
 
+  function cheatMenu(s: Estado): string {
+    const linhas = (Object.keys(CHEATS_NOMES) as (keyof Cheats)[])
+      .map((k) => {
+        const on = !!s.cheats?.[k];
+        return `<div class="linha"><button class="btn ${on ? 'primario' : ''}" data-acao="cheat" data-valor="${k}" aria-pressed="${on}">${on ? 'LIGADO' : 'desligado'}</button><span>${esc(CHEATS_NOMES[k])}</span></div>`;
+      })
+      .join('');
+    return `<h4 class="secao">Cheat mode</h4>
+      <p class="meta">Para testar as funções sem jogar. As opções valem para este ludus e ficam salvas para os próximos.</p>
+      ${linhas}`;
+  }
+
   function configuracoes(s: Estado): string {
     const p = audio.prefs();
     const lendas = s.gladiadores.filter((g) => g.lenda).length;
@@ -797,6 +823,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         <div class="dificuldades">${DIFICULDADES_ORDEM.map((d) => `<button class="btn ${d === dificuldadeSel ? 'primario' : ''}" data-acao="dificuldade" data-valor="${d}" aria-pressed="${d === dificuldadeSel}">${REGRAS[d].nome}</button>`).join('')}</div>
         <p class="meta"><strong>${REGRAS[dificuldadeSel].nome}:</strong> ${REGRAS[dificuldadeSel].resumo} A dificuldade vale para a partida inteira e não muda depois.</p>
       </div>
+      ${cheatRecemLiberado ? '<p class="meta"><strong>Cheat mode liberado.</strong> A aba Cheat aparece dentro do ludus.</p>' : ''}
       <div class="sel-acoes">
         <button class="btn" data-acao="voltar-menu">Voltar</button>
         <button class="btn grande primario" data-acao="confirmar-lanista" ${sel ? '' : 'disabled'}>${sel ? `Assumir o ludus de ${esc(sel.nome)}` : 'Escolha um lanista'}</button>
@@ -847,6 +874,8 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       return;
     }
     const s = e;
+    if (s.cheats?.ouro) s.ouro = Math.max(s.ouro, 999999);
+    if (s.cheats?.energia) s.energia = Math.max(s.energia, 99);
     if (!gameOver(s)) verificarTutorial(s);
     if (gameOver(s)) {
       audio.tocarTrilha('menu');
@@ -871,13 +900,14 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       <button class="btn" data-acao="mutar" title="${audio.prefs().ativo ? 'Silenciar' : 'Ligar o som'}" aria-label="${audio.prefs().ativo ? 'Silenciar' : 'Ligar o som'}">${audio.prefs().ativo ? '🔊' : '🔇'}</button>
       <button class="btn" data-acao="menu">Menu</button>
     </header>`;
-    const abas = `<nav class="abas">${ABAS.map(
+    const abas = `<nav class="abas">${[...ABAS, ...(cheatLiberado() ? ([['cheat', 'Cheat']] as [Aba, string][]) : [])].map(
       ([id, nome]) => `<button class="btn ${aba === id ? 'ativa' : ''}" data-acao="aba" data-valor="${id}">${nome}</button>`,
     ).join('')}</nav>`;
-    audio.tocarTrilha(aba === 'config' || aba === 'arenas' ? 'gestao' : aba);
+    audio.tocarTrilha(aba === 'config' || aba === 'arenas' || aba === 'cheat' ? 'gestao' : aba);
     audio.cena(null);
     const conteudo =
       aba === 'config' ? configuracoes(s)
+      : aba === 'cheat' ? cheatMenu(s)
       : aba === 'ludus' ? ludus(s)
       : aba === 'upgrades' ? upgrades(s)
       : aba === 'mercado' ? mercado(s)
@@ -974,6 +1004,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     switch (acao) {
       case 'continuar':
         e = carregar();
+        if (e && cheatLiberado() && !e.cheats) e.cheats = cheatsSalvos();
         menuAberto = false;
         aviso = '';
         render();
@@ -983,6 +1014,16 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         lanistaSel = null;
         render();
         return;
+      case 'cheat': {
+        if (!e) return;
+        const k = valor as keyof Cheats;
+        e.cheats = { ...e.cheats, [k]: !e.cheats?.[k] };
+        try { localStorage.setItem(CHAVE_CHEATS, JSON.stringify(e.cheats)); } catch { /* sem armazenamento */ }
+        if (k === 'lendario' && e.cheats.lendario) gerarArmeiroMestre(e);
+        salvar(e);
+        render();
+        return;
+      }
       case 'tut-prox':
         if (tut) tut.pag += 1;
         render();
@@ -1020,6 +1061,13 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         render();
         return;
       case 'marcar-lanista':
+        toquesCheat = id === LANISTAS[LANISTAS.length - 1].id ? toquesCheat + 1 : 0;
+        if (toquesCheat >= TOQUES_CHEAT) {
+          toquesCheat = 0;
+          try { localStorage.setItem(CHAVE_CHEAT, '1'); } catch { /* sem armazenamento */ }
+          cheatRecemLiberado = true;
+          audio.tocarEfeito('cheat');
+        }
         lanistaSel = id;
         render();
         return;
@@ -1031,6 +1079,8 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         if (!lanistaSel) return;
         escolhendo = false;
         e = novoJogo(undefined, lanistaSel, { dificuldade: dificuldadeSel });
+        if (cheatLiberado()) e.cheats = cheatsSalvos();
+        cheatRecemLiberado = false;
         menuAberto = false;
         aba = 'ludus';
         equipe = [];
