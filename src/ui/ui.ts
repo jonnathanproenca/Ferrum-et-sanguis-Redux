@@ -706,21 +706,30 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     const sel = equipeValida(s);
     const trilha = `<ol class="camp-trilha">${PASSOS.map((p, i) =>
       `<li class="${i < d.indice ? 'feito' : i === d.indice ? 'atual' : ''}" title="${esc(p.titulo)}"><b>${i < d.indice ? '✓' : i + 1}</b></li>`).join('')}</ol>`;
-    const n = d.sequencia.length;
-    const figuras = d.sequencia
+    // Batiatus é o bônus final: some da fila até chegar a vez dele e só aparece, sozinho no centro, quando você pode lutar.
+    const final = d.indice === d.sequencia.length - 1;
+    const misterio = final && !d.pronto;
+    const lineup = final ? (d.pronto ? [d.lanista] : []) : d.sequencia.slice(0, -1);
+    const n = lineup.length;
+    const figuras = lineup
       .map((l, i) => {
         const sp = SPRITES_LANISTA[l.id];
-        const largura = ((sp.w * 0.98) / 1376) * 100;
-        const centro = 8 + (84 / (n - 1)) * i;
-        const estado = i < d.indice ? 'vencido' : i === d.indice ? 'ativo' : 'futuro';
+        const escala = final ? 1.7 : 0.98;
+        const largura = ((sp.w * escala) / 1376) * 100;
+        const centro = final ? 50 : 8 + (84 / (n - 1)) * i;
+        const estado = final ? 'ativo' : i < d.indice ? 'vencido' : i === d.indice ? 'ativo' : 'futuro';
         return `<div class="lanista-sel camp-fig ${estado}" style="left:${(centro - largura / 2).toFixed(2)}%;width:${largura.toFixed(2)}%;z-index:${estado === 'ativo' ? 20 : 10 - Math.abs(i - d.indice)}">
           <img src="${sp.arquivo}" alt="${estado === 'futuro' ? 'Rival ainda desconhecido' : esc(l.nome)}" draggable="false">
-          <span class="camp-num">${i + 1}</span></div>`;
+          ${final ? '' : `<span class="camp-num">${i + 1}</span>`}</div>`;
       })
       .join('');
+    const campeaoRival = s.campeoesRivais[d.lanista.id];
+    const titulo = misterio ? 'Um último desafio' : esc(d.lanista.nome);
+    const subtitulo = misterio
+      ? 'Cumpra os requisitos para revelar o lanista de Cápua.'
+      : final ? `Seu gladiador: ${esc(campeaoRival.nome)}` : esc(d.lanista.titulo ?? `Escola de ${CLASSES[d.lanista.especialidade].nome}`);
     const palco = `<div class="sel-palco camp-palco" style="background-image:url('${FUNDO_LANISTAS}')">
-      <div class="sel-info"><h2>${esc(d.lanista.nome)}</h2>
-      <p>${esc(d.lanista.titulo ?? `Escola de ${CLASSES[d.lanista.especialidade].nome}`)}</p></div>
+      <div class="sel-info"><h2>${titulo}</h2><p>${subtitulo}</p></div>
       ${figuras}</div>`;
     const cabeca = `<header class="camp-cabeca"><small>Passo ${d.indice + 1} de ${PASSOS.length}</small><h2>${esc(d.passo.titulo)}</h2></header>`;
     const rival = s.campeoesRivais[d.lanista.id];
@@ -734,7 +743,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     return `<section class="camp">${cabeca}${trilha}${palco}
       <article class="camp-duelo ${d.passo.regra.letal ? 'nemesis' : ''}">
         <div class="camp-lados">
-          <div class="camp-lado rival"><div class="camp-lutador">${gladiadorImg(rival)}<span>${esc(d.lanista.nome)}</span></div>${formato > 1 ? '<small>e um companheiro</small>' : ''}</div>
+          <div class="camp-lado rival"><div class="camp-lutador">${misterio ? '<span class="camp-misterio">?</span>' : gladiadorImg(rival)}<span>${misterio ? '???' : esc(final ? rival.nome : d.lanista.nome)}</span></div>${final && !misterio ? `<small>campeão de ${esc(d.lanista.nome)}</small>` : ''}${formato > 1 ? '<small>e um companheiro</small>' : ''}</div>
           <div class="camp-vs">VS<small>${formato}×${formato}</small></div>
           <div class="camp-lado">${time}</div>
         </div>

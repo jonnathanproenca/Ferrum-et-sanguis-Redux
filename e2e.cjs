@@ -1,0 +1,34 @@
+const { chromium } = require('playwright');
+(async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
+  const erros = [];
+  page.on('pageerror', (e) => erros.push('pageerror: ' + e.message));
+  page.on('console', (m) => { if (m.type() === 'error') erros.push('console: ' + m.text()); });
+  page.on('dialog', (d) => d.accept());
+  await page.goto('http://localhost:4173/', { waitUntil: 'networkidle' });
+  await page.screenshot({ path: 'shot-menu.png' });
+  await page.click('button[data-acao="novo"]');
+  await page.waitForSelector('.topo');
+  await page.click('button[data-acao="treinar"]');
+  await page.click('button[data-acao="aba"][data-id="arenas"]');
+  await page.click('button[data-acao="lutar"][data-id="coliseu"]');
+  await page.waitForSelector('#game', { state: 'visible' });
+  await page.waitForTimeout(19000);
+  await page.screenshot({ path: 'shot-arena.png' });
+  const fim = await page.locator('canvas').count();
+  console.log('canvas count', fim);
+  // clicar em Continuar no canvas: posição aproximada do botão (centro 480,330 no canvas 960x540 escalado)
+  const box = await page.locator('canvas').first().boundingBox();
+  await page.mouse.click(box.x + box.width * (480 / 960), box.y + box.height * (330 / 540));
+  await page.waitForTimeout(800);
+  const visivel = await page.locator('#ui').isVisible();
+  console.log('ui visible after fight:', visivel);
+  await page.screenshot({ path: 'shot-depois.png' });
+  await page.click('button[data-acao="aba"][data-id="campanha"]');
+  await page.click('button[data-acao="aba"][data-id="ludus"]');
+  await page.click('button[data-acao="turno"]');
+  await page.screenshot({ path: 'shot-ludus.png', fullPage: true });
+  console.log('erros:', JSON.stringify(erros, null, 1));
+  await browser.close();
+})().catch((e) => { console.error('FALHA', e.message); process.exit(1); });

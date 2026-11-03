@@ -177,6 +177,30 @@
         "letal": true
       },
       "formato": 2
+    },
+    {
+      "titulo": "O Lanista de Cápua",
+      "requisitos": [
+        {
+          "tipo": "gladiadorVitorias",
+          "valor": 10
+        },
+        {
+          "tipo": "vitoriasTotais",
+          "valor": 30
+        }
+      ],
+      "regra": {
+        "nome": "Espártaco, o invicto",
+        "descricao": "O campeão de Batiatus é o gladiador mais temido de Roma: +3 de força e de agilidade.",
+        "bonus": {
+          "forca": 3,
+          "agilidade": 3
+        },
+        "efeitosPoco": false,
+        "letal": true
+      },
+      "formato": 1
     }
   ]
 }

@@ -1,0 +1,20 @@
+const { chromium } = require('playwright');
+(async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
+  const erros = [];
+  page.on('pageerror', (e) => erros.push('pageerror: ' + e.stack));
+  page.on('console', (m) => erros.push(m.type() + ': ' + m.text()));
+  page.on('dialog', (d) => d.accept());
+  await page.goto('http://localhost:4173/', { waitUntil: 'networkidle' });
+  await page.click('button[data-acao="novo"]');
+  await page.waitForSelector('.topo');
+  await page.click('button[data-acao="aba"][data-id="arenas"]');
+  await page.click('button[data-acao="lutar"][data-id="coliseu"]');
+  await page.waitForTimeout(1500);
+  console.log('game display:', await page.$eval('#game', (el) => getComputedStyle(el).display + ' ' + el.getBoundingClientRect().width + 'x' + el.getBoundingClientRect().height));
+  console.log('canvas:', await page.evaluate(() => { const c = document.querySelector('canvas'); return c ? [c.width, c.height, c.getBoundingClientRect().width] : null; }));
+  await page.screenshot({ path: 'dbg.png' });
+  console.log(erros.slice(0, 20).join('\n'));
+  await browser.close();
+})().catch((e) => { console.error('FALHA', e.message); process.exit(1); });

@@ -63,7 +63,7 @@ export const TOPICOS: Topico[] = [
     titulo: 'Campanha',
     aba: 'campanha',
     paginas: () => [
-      { titulo: 'Os lanistas rivais', texto: 'A campanha tem 9 passos, sempre numa sequência fixa de rivais própria da sua casa. Os silhuetas ainda não foram revelados; os vencidos ficam riscados. Batiatus é o penúltimo e Espártaco o último. Cada passo tem uma regra própria e requisitos, como vitórias na arena ou um gladiador equipado.' },
+      { titulo: 'Os lanistas rivais', texto: 'A campanha enfrenta, numa sequência fixa e própria da sua casa, todos os outros lanistas. As silhuetas ainda não foram reveladas e os vencidos ficam riscados. Depois deles surge um desafio bônus: o lanista Batiatus e seu campeão, Espártaco. Cada passo tem uma regra própria e requisitos, como vitórias na arena ou um gladiador equipado.' },
       { titulo: 'Até a morte', texto: 'Nas lutas da campanha ninguém se rende: vai até a morte. Alguns passos são 2×2. Prepare seu time antes de entrar na arena.' },
     ],
   },

@@ -80,17 +80,18 @@ describe('partida nova', () => {
     expect(e.gladiadores).toHaveLength(1);
   });
 
-  it('cada lanista tem sua própria sequência fixa, terminando em Batiatus e Espártaco', () => {
+  it('cada lanista tem sua própria sequência fixa, com todos os outros e Batiatus por último', () => {
     const seqs = LANISTAS.map((l) => sequenciaCampanha(l.id).map((x) => x.id).join('>'));
     expect(new Set(seqs).size).toBe(LANISTAS.length);
     for (const l of LANISTAS) {
       const seq = sequenciaCampanha(l.id);
       expect(seq).toHaveLength(PASSOS.length);
       expect(seq.some((x) => x.id === l.id)).toBe(false);
-      expect(seq.slice(-2).map((x) => x.id)).toEqual(['batiatus', 'espartaco']);
+      expect(seq.slice(0, -1).map((x) => x.id).sort()).toEqual(LANISTAS.filter((x) => x.id !== l.id).map((x) => x.id).sort());
+      expect(seq[seq.length - 1].id).toBe('batiatus');
       expect(sequenciaCampanha(l.id).map((x) => x.id)).toEqual(seq.map((x) => x.id));
     }
-    expect(FINAIS.map((x) => x.id)).toEqual(['batiatus', 'espartaco']);
+    expect(FINAIS.map((x) => x.id)).toEqual(['batiatus']);
   });
 
   it('o desafio vem da sequência, sem escolha, e o cheat ignora os requisitos', () => {
@@ -102,8 +103,10 @@ describe('partida nova', () => {
     e.cheats = { campanha: true };
     expect(proximoDesafio(e)!.pronto).toBe(true);
     e.campanha = PASSOS.length - 1;
-    expect(proximoDesafio(e)!.lanista.id).toBe('espartaco');
-    expect(proximoDesafio(e)!.pronto).toBe(true);
+    const final = proximoDesafio(e)!;
+    expect(final.lanista.id).toBe('batiatus');
+    expect(e.campeoesRivais.batiatus.nome).toBe('Espártaco');
+    expect(final.pronto).toBe(true);
   });
 
   it('cada origem tem 8 ou mais terras, com 4 aparências', () => {

@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "celular": "vite --host --port 5173"
+    "celular": "vite --host --port 5173 --strictPort",
+    "tunel": "powershell -ExecutionPolicy Bypass -File ./tunel.ps1"
   },
   "dependencies": {
     "phaser": "^3.80.1"

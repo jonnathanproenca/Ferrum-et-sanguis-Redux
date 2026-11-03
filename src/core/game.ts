@@ -406,11 +406,22 @@ export function arenaPorId(id: string): Arena {
   return a;
 }
 
-/** Os dois últimos rivais da campanha, sempre nesta ordem, qualquer que seja o lanista do jogador. */
+/**
+ * Batiatus fecha a campanha como bônus, depois de todos os outros lanistas. O campeão dele é Espártaco
+ * (por enquanto com os golpes do Trácio, até existir a folha de sprites de duas espadas).
+ */
 export const FINAIS: Lanista[] = [
-  { id: 'batiatus', nome: 'Lêntulo Batiatus', especialidade: 'murmilo', titulo: 'O lanista de Cápua', historia: 'Dono do ludus mais temido da Campânia, só enfrenta quem já provou valor.' },
-  { id: 'espartaco', nome: 'Espártaco', especialidade: 'tracio', titulo: 'O campeão invicto', historia: 'Trácio que a arena não conseguiu quebrar. O último desafio da sua carreira.' },
+  { id: 'batiatus', nome: 'Lêntulo Batiatus', especialidade: 'tracio', titulo: 'O lanista de Cápua', historia: 'Dono do ludus mais temido da Campânia. Só aceita enfrentar quem já provou valor.' },
 ];
+export const NOME_CAMPEAO_FINAL = 'Espártaco';
+
+/** Campeão do lanista rival; o de Batiatus é Espártaco. */
+function criarCampeaoRival(rng: Rng, l: Lanista): Gladiador {
+  const nivel = l.id === 'batiatus' ? 8 : 4;
+  const g = gerarGladiador(rng, `campeao-${l.id}`, l.especialidade, nivel, 'livre', true);
+  if (l.id === 'batiatus') g.nome = NOME_CAMPEAO_FINAL;
+  return g;
+}
 
 function hashTexto(t: string): number {
   let h = 2166136261;
@@ -420,7 +431,7 @@ function hashTexto(t: string): number {
 
 /**
  * Sequência fixa da campanha de cada lanista: os rivais vêm numa ordem própria da casa e a
- * campanha termina sempre com Batiatus e, por último, Espártaco.
+ * campanha passa por todos os outros lanistas e termina sempre com Batiatus, o bônus final.
  */
 export function sequenciaCampanha(casaId: string): Lanista[] {
   const outros = LANISTAS.filter((l) => l.id !== casaId);
@@ -429,7 +440,7 @@ export function sequenciaCampanha(casaId: string): Lanista[] {
     const j = rng.int(0, i);
     [outros[i], outros[j]] = [outros[j], outros[i]];
   }
-  return [...outros.slice(0, PASSOS.length - FINAIS.length), ...FINAIS];
+  return [...outros, ...FINAIS];
 }
 
 /** Lanistas rivais, na ordem em que enfrentam o jogador na campanha. */
@@ -470,8 +481,7 @@ export function novoJogo(semente: number = Date.now() % 2147483646, casaId?: str
 
   e.gladiadores.push(gerarGladiador(rng, novoId(e), casa.especialidade, nivelCampeao, 'livre', regrasDe(e).campeao === 0));
   for (const l of filaLanistas(e)) {
-    const nivel = l.id === 'batiatus' ? 6 : l.id === 'espartaco' ? 8 : 4;
-    e.campeoesRivais[l.id] = gerarGladiador(rng, `campeao-${l.id}`, l.especialidade, nivel, 'livre', true);
+    e.campeoesRivais[l.id] = criarCampeaoRival(rng, l);
   }
   gerarMercado(e);
   gerarArmeiroMestre(e);
@@ -998,9 +1008,8 @@ export function proximoDesafio(e: Estado): Desafio | null {
   const sequencia = sequenciaCampanha(e.casaId);
   const lanista = sequencia[e.campanha];
   if (!e.campeoesRivais[lanista.id]) {
-    // Saves antigos não têm os campeões de Batiatus e Espártaco.
-    const nivel = lanista.id === 'batiatus' ? 6 : lanista.id === 'espartaco' ? 8 : 4;
-    e.campeoesRivais[lanista.id] = gerarGladiador(proximoRng(e), `campeao-${lanista.id}`, lanista.especialidade, nivel, 'livre', true);
+    // Saves antigos não têm o campeão de Batiatus (Espártaco).
+    e.campeoesRivais[lanista.id] = criarCampeaoRival(proximoRng(e), lanista);
   }
   const ignora = !!e.cheats?.campanha;
   const requisitos = passo.requisitos.map((r) => ({ texto: textoRequisito(r), ok: ignora || cumpre(e, r) }));

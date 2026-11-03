@@ -146,6 +146,7 @@ function posicoes(quantidade: number, lado: 'A' | 'B', centro: number, f: number
 export class ArenaScene extends Phaser.Scene {
   private dados?: Dados;
   private lutadores: Record<string, Lutador> = {};
+  private montado = false;
   private fichas: Record<string, Ficha> = {};
   private partes: Record<string, Partial<Record<ParteId, string>>> = {};
   private plateia: Espectador[] = [];
@@ -159,6 +160,11 @@ export class ArenaScene extends Phaser.Scene {
 
   init(dados?: Dados): void {
     this.dados = dados;
+    // Lutadores da luta anterior apontam para objetos já destruídos: zera tudo antes de montar a nova cena.
+    this.lutadores = {};
+    this.montado = false;
+    this.fimMostrado = false;
+    this.confirmando = false;
   }
 
   create(): void {
@@ -168,6 +174,7 @@ export class ArenaScene extends Phaser.Scene {
     this.carregarTexturas(d).then(() => {
       if (!this.sys.isActive()) return;
       this.montar(d);
+      this.montado = true;
     });
   }
 
@@ -249,6 +256,7 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   update(): void {
+    if (!this.montado || !this.sys.isActive()) return;
     const agora = this.time.now;
     for (const c of Object.values(this.lutadores)) c.atualizar(agora);
   }
