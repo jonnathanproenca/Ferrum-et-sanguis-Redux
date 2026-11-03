@@ -310,6 +310,8 @@
       .forja-fundo { inset: 0; width: 100%; height: 100%; display: block; }
       .forja-camada { background-repeat: no-repeat; }
       .forja-ferreiro { display: block; height: auto; }
+      .luz-porta { background: radial-gradient(ellipse at center, rgba(255, 235, 170, 0.5), rgba(255, 220, 140, 0) 70%); mix-blend-mode: screen; animation: luz-respira 4s ease-in-out infinite alternate; }
+      @keyframes luz-respira { from { opacity: 0.6; } to { opacity: 1; } }
       .forja-brilho { background: radial-gradient(ellipse at center, rgba(255, 150, 50, 0.55), rgba(255, 110, 30, 0.18) 45%, rgba(255, 90, 20, 0) 70%); mix-blend-mode: screen; animation: forja-pisca 1.1s ease-in-out infinite alternate; }
       @keyframes forja-pisca { from { opacity: 0.65; transform: scale(0.96); } to { opacity: 1; transform: scale(1.04); } }
       @media (prefers-reduced-motion: reduce) { .forja-camada, .forja-brilho { animation: none !important; } .forja-camada { background-position-x: 0% !important; } }

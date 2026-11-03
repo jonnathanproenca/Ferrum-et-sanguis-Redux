@@ -2,6 +2,7 @@ import { nomeAparencia } from '../art/gladiador';
 import { iconeItem } from '../art/icones';
 import { FORJA } from '../art/armeiro';
 import { ESCRITORIO } from '../art/engenheiro';
+import { ENFERMARIA } from '../art/enfermaria';
 import { SPRITES_CLASSE } from '../art/sprites';
 import { varianteDe } from '../art/variantes';
 import { pixelarImagens, colorirSprites } from '../art/pixel';
@@ -69,13 +70,14 @@ import {
 } from '../core/model';
 import type { Stats, TipoEfeito } from '../core/combat';
 
-type Aba = 'ludus' | 'upgrades' | 'mercado' | 'armeiro' | 'arenas' | 'campanha' | 'config';
+type Aba = 'ludus' | 'upgrades' | 'mercado' | 'armeiro' | 'enfermaria' | 'arenas' | 'campanha' | 'config';
 
 const ABAS: [Aba, string][] = [
   ['ludus', 'Ludus'],
   ['upgrades', 'Upgrades'],
   ['mercado', 'Mercado'],
   ['armeiro', 'Armeiro'],
+  ['enfermaria', 'Enfermaria'],
   ['arenas', 'Arenas'],
   ['campanha', 'Campanha'],
   ['config', 'Opções'],
@@ -349,7 +351,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     },
     enfermaria: {
       rotulo: 'Enfermaria',
-      acao: 'painel-ludus',
+      acao: 'aba',
       valor: 'enfermaria',
       svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="currentColor"/></svg>',
     },
@@ -490,6 +492,38 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       <img class="forja-ferreiro" src="${f.arquivo}" alt="" draggable="false" style="${cam(f)}">
       <img class="forja-ferreiro" src="${m.arquivo}" alt="" draggable="false" style="${cam(m)}">
     </div>`;
+  }
+
+  /** Aba Enfermaria: cena do médico e lista dos feridos para tratar. */
+  function enfermaria(s: Estado): string {
+    if (!temMelhoria(s, 'enfermaria')) {
+      return `<p class="aviso">Construa a enfermaria no menu Upgrades para tratar os feridos.</p>
+        <button class="btn primario" data-acao="aba" data-valor="upgrades">Ir aos upgrades</button>`;
+    }
+    const pc = (v: number, total: number): string => `${((v / total) * 100).toFixed(3)}%`;
+    const E = ENFERMARIA;
+    const m = E.medico;
+    const lz = E.luzPorta;
+    const t = E.tocha;
+    const cena = `<div class="forja enfermaria" role="img" aria-label="Médico brutal do ludus aguardando os feridos">
+      <img class="forja-fundo" src="${E.fundo}" alt="" draggable="false">
+      <div class="luz-porta" style="left:${pc(lz.x, E.w)};top:${pc(lz.y, E.h)};width:${pc(lz.w, E.w)};aspect-ratio:${lz.w}/${lz.h}"></div>
+      <div class="forja-brilho" style="left:${pc(t.x - t.r, E.w)};top:${pc(t.y - t.r, E.h)};width:${pc(t.r * 2, E.w)};aspect-ratio:1"></div>
+      <img class="forja-ferreiro" src="${m.arquivo}" alt="" draggable="false" style="left:${pc(m.x, E.w)};top:${pc(m.y, E.h)};width:${pc(m.w, E.w)};aspect-ratio:${m.w}/${m.h}">
+    </div>`;
+    const feridos = s.gladiadores.filter((g) => g.vivo && g.efeitos.length);
+    const lista = feridos.length
+      ? feridos
+          .map(
+            (g) => `<article class="card">
+          <h3>${esc(g.nome)}</h3>
+          <div class="efeitos">${g.efeitos.map((ef) => `<span class="efeito">${NOME_EFEITO[ef.tipo]} ${ef.severidade}</span>`).join('')}</div>
+          <button class="btn primario" data-acao="tratar" data-id="${g.id}" ${s.energia < 1 || s.ouro < custoTratamento(g) ? 'disabled' : ''}>Tratar · ${custoTratamento(g)} ouro · 1 energia</button>
+        </article>`,
+          )
+          .join('')
+      : '<p class="meta">Ninguém ferido agora. O médico aguarda, entediado.</p>';
+    return `${cena}<p class="meta">Tratar um ferido remove os efeitos deixados pelo Poço.</p><div class="grade">${lista}</div>`;
   }
 
   function armeiro(s: Estado): string {
@@ -773,6 +807,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       : aba === 'upgrades' ? upgrades(s)
       : aba === 'mercado' ? mercado(s)
       : aba === 'armeiro' ? armeiro(s)
+      : aba === 'enfermaria' ? enfermaria(s)
       : aba === 'arenas' ? arenas(s)
       : campanha(s);
     const avisoHtml = aviso ? `<p class="aviso">${esc(aviso)}</p>` : '';
