@@ -439,6 +439,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
 
   /** Escritório do engenheiro: fundo estático, engenheiro respirando e brilho da lamparina. */
   function escritorio(): string {
+    audio.cena('escritorio');
     const pc = (v: number, total: number): string => `${((v / total) * 100).toFixed(3)}%`;
     const e = ESCRITORIO.engenheiro;
     const l = ESCRITORIO.lamparina;
@@ -496,6 +497,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
   }
 
   function mercado(s: Estado): string {
+    audio.cena('mercado');
     const lotado = s.gladiadores.length >= capacidadeLudus(s) && capacidadeLudus(s) < MAX_GLADIADORES
       ? `<p class="aviso">Ludus lotado (${s.gladiadores.length}/${capacidadeLudus(s)}). Construa os alojamentos para ampliar.</p>`
       : '';
@@ -511,6 +513,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
 
   /** Cena da forja: fundo, brilho e fogo da fornalha e o ferreiro martelando uma lâmina (animação com faíscas). */
   function forja(): string {
+    audio.cena('forja');
     const pc = (v: number, total: number): string => `${((v / total) * 100).toFixed(3)}%`;
     const cam = (c: { x: number; y: number; w: number; h: number; quadros?: number }): string =>
       `left:${pc(c.x, FORJA.w)};top:${pc(c.y, FORJA.h)};width:${pc(c.w, FORJA.w)};aspect-ratio:${c.w}/${c.h}`;
@@ -530,6 +533,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       return `<p class="aviso">Construa a enfermaria no menu Upgrades para tratar os feridos.</p>
         <button class="btn primario" data-acao="aba" data-valor="upgrades">Ir aos upgrades</button>`;
     }
+    audio.cena('enfermaria');
     const pc = (v: number, total: number): string => `${((v / total) * 100).toFixed(3)}%`;
     const E = ENFERMARIA;
     const m = E.medico;
@@ -819,7 +823,8 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     const abas = `<nav class="abas">${ABAS.map(
       ([id, nome]) => `<button class="btn ${aba === id ? 'ativa' : ''}" data-acao="aba" data-valor="${id}">${nome}</button>`,
     ).join('')}</nav>`;
-    audio.tocarTrilha('gestao');
+    audio.tocarTrilha(aba === 'config' || aba === 'arenas' ? 'gestao' : aba);
+    audio.cena(null);
     const conteudo =
       aba === 'config' ? configuracoes(s)
       : aba === 'ludus' ? ludus(s)
@@ -830,6 +835,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       : aba === 'arenas' ? arenas(s)
       : campanha(s);
     const avisoHtml = aviso ? `<p class="aviso">${esc(aviso)}</p>` : '';
+    audio.aplicarCena();
     raiz.innerHTML = `${topo}${abas}${avisoHtml}${conteudo}<section class="rodape">${registro(s)}</section>`;
   }
 

@@ -1,5 +1,6 @@
 /**
- * Som sintetizado com Web Audio: nenhum arquivo externo.
+ * Áudio com Web Audio. Camada de arquivos (public/assets/audio, listados em audio-manifest.json): música por tela,
+ * efeitos, ambientes e vozes. Sem o arquivo, cai num som sintetizado. Veja docs/AUDIO.md.
  * Música: uma trilha por tela, em loop, com cross-fade. Cada arena tem a sua intensidade:
  * arena pequena (vazia) = trilha discreta; média = trilha firme; cheia = trilha forte.
  * Batalhas de lanista (campanha) geram uma trilha épica própria por lanista.
@@ -49,6 +50,61 @@ const TRILHAS: Record<string, Trilha> = {
   // Arena cheia: a trilha mais forte, com coro, chifres e taiko.
   coliseu: { bpm: 112, raiz: 110, escala: MENOR_HARMONICA, progressao: [0, 5, 6, 4], melodia: 'corno', densidade: 0.7, coro: true, drone: true, percussao: 'taiko_epica', volume: 1, semente: 67 },
 };
+
+/** Telas de gestão sem música própria usam esta, na ordem. */
+const ALIAS_MUSICA: Record<string, string[]> = {
+  ludus: ['gestao'], upgrades: ['gestao'], mercado: ['gestao'], armeiro: ['gestao'],
+  enfermaria: ['gestao'], campanha: ['gestao'], arenas: ['gestao'],
+};
+const ARENAS = new Set(['pompeia', 'capua', 'poco', 'coliseu']);
+
+type Cena = 'forja' | 'escritorio' | 'enfermaria' | 'mercado';
+type Npc = 'engenheiro' | 'medico' | 'mercador';
+
+interface Voz {
+  base: number;
+  formantes: [number, number];
+  silabas: [number, number];
+  dur: [number, number];
+  /** Variação do tom entre sílabas (semitons) e tendência (negativo = cai). */
+  salto: number;
+  queda: number;
+  aspereza: number;
+  vol: number;
+}
+
+/** Cada NPC murmura com uma voz diferente: o engenheiro agudo e curioso, o médico grave e rouco, o mercador anasalado. */
+const VOZES: Record<Npc, Voz> = {
+  engenheiro: { base: 250, formantes: [520, 1700], silabas: [2, 4], dur: [0.07, 0.12], salto: 4, queda: 0, aspereza: 0.05, vol: 0.5 },
+  medico: { base: 88, formantes: [380, 850], silabas: [2, 3], dur: [0.18, 0.3], salto: 2, queda: -2.5, aspereza: 0.45, vol: 0.8 },
+  mercador: { base: 150, formantes: [650, 1250], silabas: [3, 5], dur: [0.09, 0.15], salto: 3, queda: 0.5, aspereza: 0.2, vol: 0.6 },
+};
+
+interface CenaCfg {
+  /** Ambiente em loop: chave do arquivo e volume. */
+  ambiente?: { chave: string; vol: number; sintese: 'fogo' | 'multidao' };
+  bigorna?: boolean;
+  npc?: Npc;
+}
+
+/** Quadro (ms) em que o martelo toca a bigorna na animação do ferreiro (64 quadros de 42 ms). */
+const BIGORNA_IMPACTO = 1.05;
+const BIGORNA_CICLO = 2.688;
+
+const CENAS: Record<Cena, CenaCfg> = {
+  forja: { ambiente: { chave: 'ambiente/fogo', vol: 0.3, sintese: 'fogo' }, bigorna: true },
+  escritorio: { npc: 'engenheiro' },
+  enfermaria: { npc: 'medico' },
+  mercado: { ambiente: { chave: 'ambiente/mercado', vol: 0.7, sintese: 'multidao' }, npc: 'mercador' },
+};
+
+interface CenaAtiva {
+  cena: Cena;
+  cfg: CenaCfg;
+  nos: { ganho: GainNode; src: AudioBufferSourceNode }[];
+  proxBigorna: number;
+  proxVoz: number;
+}
 
 const CHAVE = 'ferrum-et-sanguis:audio';
 const PADRAO: Prefs = { ativo: true, musica: 0.5, efeitos: 0.7 };
@@ -152,6 +208,14 @@ class Motor {
   private desejada = 'menu';
   private trilhasLanista = new Map<string, Trilha>();
   private prefs: Prefs = carregarPrefs();
+  /** Arquivos de áudio disponíveis: chave (sem extensão) -> caminho. */
+  private manifesto = new Map<string, string>();
+  private buffers = new Map<string, AudioBuffer>();
+  private carregando = new Set<string>();
+  private arq: { chave: string; ganho: GainNode; src: AudioBufferSourceNode } | null = null;
+  private efetiva = '';
+  private pedida: Cena | null = null;
+  private cenaAt: CenaAtiva | null = null;
 
   /** Chamado a partir de um gesto do jogador (navegadores exigem isso para tocar som). */
   desbloquear(): void {
@@ -172,8 +236,12 @@ class Motor {
         for (let i = 0; i < n; i++) dados[i] = Math.random() * 2 - 1;
         this.aplicarPrefs();
         setInterval(() => this.agendar(), 50);
+        void this.carregarManifesto();
       }
-      void this.ctx.resume().then(() => this.tocarTrilha(this.desejada));
+      void this.ctx.resume().then(() => {
+        this.tocarTrilha(this.desejada);
+        this.aplicarCena();
+      });
     } catch {
       /* navegador sem áudio: o jogo segue mudo */
     }
@@ -214,32 +282,277 @@ class Motor {
     return undefined;
   }
 
+  private async carregarManifesto(): Promise<void> {
+    try {
+      const base = import.meta.env.BASE_URL;
+      const r = await fetch(`${base}audio-manifest.json`);
+      if (!r.ok || (r.headers.get('content-type') ?? '').includes('html')) return;
+      const lista = (await r.json()) as string[];
+      for (const arq of lista) this.manifesto.set(arq.replace(/\.[^.]+$/, ''), `${base}assets/audio/${arq}`);
+      this.efetiva = '';
+      this.tocarTrilha(this.desejada);
+      this.aplicarCena();
+    } catch {
+      /* sem manifesto: só som sintetizado */
+    }
+  }
+
+  /** Devolve o áudio decodificado ou começa a carregá-lo (retorna undefined até ficar pronto). */
+  private obter(chave: string): AudioBuffer | undefined {
+    const pronto = this.buffers.get(chave);
+    if (pronto) return pronto;
+    const url = this.manifesto.get(chave);
+    const c = this.ctx;
+    if (!url || !c || this.carregando.has(chave)) return undefined;
+    this.carregando.add(chave);
+    void fetch(url)
+      .then((r) => r.arrayBuffer())
+      .then((d) => c.decodeAudioData(d))
+      .then((b) => {
+        this.buffers.set(chave, b);
+        this.efetiva = '';
+        this.tocarTrilha(this.desejada);
+        this.aplicarCena();
+      })
+      .catch(() => undefined);
+    return undefined;
+  }
+
+  /** Variantes de um som: 'sfx/golpe' e 'sfx/golpe-1', 'sfx/golpe-2'... */
+  private variantes(base: string): string[] {
+    const saida: string[] = [];
+    for (const k of this.manifesto.keys()) if (k === base || /-\d+$/.test(k) && k.replace(/-\d+$/, '') === base) saida.push(k);
+    return saida;
+  }
+
+  private tocarArquivo(chave: string, vol: number, bus: AudioNode, atraso = 0): boolean {
+    const c = this.ctx;
+    const buf = this.obter(chave);
+    if (!c || !buf) return false;
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const g = c.createGain();
+    g.gain.value = vol;
+    src.connect(g);
+    g.connect(bus);
+    src.start(c.currentTime + atraso);
+    return true;
+  }
+
+  private chaveMusica(nome: string): string | undefined {
+    const generico = nome.startsWith('campanha:') ? ['campanha', 'coliseu'] : [];
+    for (const k of [nome, ...generico, ...(ALIAS_MUSICA[nome] ?? [])]) if (this.manifesto.has(`musica/${k}`)) return `musica/${k}`;
+    return undefined;
+  }
+
+  private calarMusica(t: number): void {
+    const apagar = (g: GainNode): void => {
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(g.gain.value, t);
+      g.gain.linearRampToValueAtTime(0, t + 1);
+      setTimeout(() => g.disconnect(), 1500);
+    };
+    if (this.atual) apagar(this.atual.ganho);
+    this.atual = null;
+    if (this.arq) {
+      apagar(this.arq.ganho);
+      const velho = this.arq.src;
+      setTimeout(() => velho.stop(), 1500);
+      this.arq = null;
+    }
+  }
+
   /** Troca a música da tela. Com o som ainda bloqueado, guarda o pedido para depois. */
   tocarTrilha(nome: string): void {
     this.desejada = nome;
-    const c = this.ctx;
-    const tr = this.trilha(nome);
-    if (!c || !this.musicaBus || c.state !== 'running' || !tr) return;
-    if (this.atual?.nome === nome) return;
-    const t = c.currentTime;
-    if (this.atual) {
-      const velho = this.atual.ganho;
-      velho.gain.cancelScheduledValues(t);
-      velho.gain.setValueAtTime(velho.gain.value, t);
-      velho.gain.linearRampToValueAtTime(0, t + 1);
-      setTimeout(() => velho.disconnect(), 1500);
+    if (nome === 'menu' || ARENAS.has(nome) || nome.startsWith('campanha:')) {
+      this.pedida = null;
+      this.aplicarCena();
     }
+    const c = this.ctx;
+    if (!c || !this.musicaBus || c.state !== 'running') return;
+    const chave = this.chaveMusica(nome);
+    const buf = chave ? this.obter(chave) : undefined;
+    const tr = this.trilha(nome) ?? TRILHAS.gestao;
+    const nomeSint = this.trilha(nome) ? nome : 'gestao';
+    const efetiva = buf ? `arq:${chave}` : `sint:${nomeSint}`;
+    if (this.efetiva === efetiva) return;
+    this.efetiva = efetiva;
+    const t = c.currentTime;
+    this.calarMusica(t);
     const ganho = c.createGain();
     ganho.gain.setValueAtTime(0, t);
     ganho.gain.linearRampToValueAtTime(1, t + 1.5);
     ganho.connect(this.musicaBus);
-    this.atual = { nome, trilha: tr, melodia: gerarMelodia(tr), ganho, proximo: t + 0.05, passo: 0 };
+    if (buf && chave) {
+      const src = c.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      src.connect(ganho);
+      src.start(t);
+      this.arq = { chave, ganho, src };
+      return;
+    }
+    this.atual = { nome: nomeSint, trilha: tr, melodia: gerarMelodia(tr), ganho, proximo: t + 0.05, passo: 0 };
+  }
+
+  /** Registra qual cena animada está na tela (null = nenhuma). Efetiva com aplicarCena(). */
+  cena(nome: Cena | null): void {
+    this.pedida = nome;
+  }
+
+  aplicarCena(): void {
+    const c = this.ctx;
+    const bus = this.efeitosBus;
+    if (!c || !bus || c.state !== 'running') return;
+    const mesma = this.cenaAt?.cena === this.pedida;
+    // A animação reinicia a cada redesenho da tela: realinha a bigorna com o quadro do martelo.
+    if (mesma && this.cenaAt) {
+      this.cenaAt.proxBigorna = c.currentTime + BIGORNA_IMPACTO;
+      return;
+    }
+    if (this.cenaAt) {
+      const t = c.currentTime;
+      for (const n of this.cenaAt.nos) {
+        n.ganho.gain.cancelScheduledValues(t);
+        n.ganho.gain.setValueAtTime(n.ganho.gain.value, t);
+        n.ganho.gain.linearRampToValueAtTime(0, t + 0.5);
+        const src = n.src;
+        setTimeout(() => src.stop(), 700);
+      }
+      this.cenaAt = null;
+    }
+    if (!this.pedida) return;
+    const cfg = CENAS[this.pedida];
+    const nos: CenaAtiva['nos'] = [];
+    const amb = cfg.ambiente;
+    if (amb) {
+      const buf = this.obter(amb.chave);
+      const src = c.createBufferSource();
+      const g = c.createGain();
+      if (buf) {
+        src.buffer = buf;
+      } else if (this.ruido) {
+        src.buffer = this.ruido;
+        const f = c.createBiquadFilter();
+        f.type = amb.sintese === 'fogo' ? 'lowpass' : 'bandpass';
+        f.frequency.value = amb.sintese === 'fogo' ? 420 : 650;
+        f.Q.value = amb.sintese === 'fogo' ? 0.7 : 0.6;
+        src.connect(f);
+        f.connect(g);
+      }
+      src.loop = true;
+      if (buf) src.connect(g);
+      g.gain.setValueAtTime(0, c.currentTime);
+      g.gain.linearRampToValueAtTime(buf ? amb.vol : amb.vol * (amb.sintese === 'fogo' ? 0.5 : 0.22), c.currentTime + 1);
+      g.connect(bus);
+      src.start();
+      nos.push({ ganho: g, src });
+    }
+    this.cenaAt = {
+      cena: this.pedida,
+      cfg,
+      nos,
+      proxBigorna: c.currentTime + BIGORNA_IMPACTO,
+      proxVoz: c.currentTime + 1.5 + Math.random() * 2,
+    };
+  }
+
+  /** Agenda os sons pontuais da cena: bigorna sincronizada, murmúrios, estalos e vozes de fundo. */
+  private agendarCena(c: AudioContext): void {
+    const s = this.cenaAt;
+    const bus = this.efeitosBus;
+    if (!s || !bus) return;
+    const agora = c.currentTime;
+    if (s.cfg.bigorna) {
+      while (s.proxBigorna < agora + 0.15) {
+        if (s.proxBigorna > agora - 0.05) this.bigorna(c, bus, Math.max(s.proxBigorna, agora));
+        s.proxBigorna += BIGORNA_CICLO;
+      }
+    }
+    if (s.cfg.npc && agora >= s.proxVoz) {
+      this.murmurar(c, bus, s.cfg.npc, agora + 0.02);
+      s.proxVoz = agora + 4 + Math.random() * 5;
+    }
+    const amb = s.cfg.ambiente;
+    if (amb && !this.buffers.has(amb.chave)) {
+      if (amb.sintese === 'fogo' && Math.random() < 0.1) {
+        this.ruidoFiltrado(c, agora, 0.03 + Math.random() * 0.04, 'highpass', 2500 + Math.random() * 2500, 0.05, bus);
+      }
+      if (amb.sintese === 'multidao' && Math.random() < 0.05) {
+        const f = 90 + Math.random() * 130;
+        this.murmurar(c, bus, 'mercador', agora, { base: f, vol: 0.12 });
+      }
+    }
+  }
+
+  private bigorna(c: AudioContext, bus: AudioNode, t: number): void {
+    const vars = this.variantes('cena/bigorna');
+    if (vars.length) {
+      const k = vars[Math.floor(Math.random() * vars.length)];
+      if (this.buffers.has(k)) {
+        this.tocarArquivo(k, 1, bus, Math.max(0, t - c.currentTime));
+        return;
+      }
+      this.obter(k);
+    }
+    // Síntese: pancada de martelo, tinido de ferro e ressonância.
+    this.ruidoFiltrado(c, t, 0.05, 'highpass', 3000, 0.5, bus);
+    this.tom(c, 180, t, 0.12, 'square', 0.35, bus, undefined, 90);
+    for (const [f, v, d] of [[1250, 0.22, 0.9], [2230, 0.14, 0.6], [3380, 0.08, 0.4], [780, 0.12, 1.1]] as const) {
+      this.tom(c, f, t, d, 'sine', v, bus);
+    }
+  }
+
+  private murmurar(c: AudioContext, bus: AudioNode, npc: Npc, t: number, ajuste?: { base: number; vol: number }): void {
+    const vars = this.variantes(`voz/${npc}`);
+    if (vars.length && !ajuste) {
+      const k = vars[Math.floor(Math.random() * vars.length)];
+      if (this.tocarArquivo(k, 1, bus)) return;
+    }
+    const v = { ...VOZES[npc], ...ajuste };
+    const n = v.silabas[0] + Math.floor(Math.random() * (v.silabas[1] - v.silabas[0] + 1));
+    let semitom = 0;
+    let at = t;
+    for (let i = 0; i < n; i++) {
+      const dur = v.dur[0] + Math.random() * (v.dur[1] - v.dur[0]);
+      semitom += (Math.random() * 2 - 1) * v.salto + v.queda;
+      const f = v.base * Math.pow(2, semitom / 12);
+      const o = c.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f, at);
+      o.frequency.exponentialRampToValueAtTime(Math.max(40, f * (1 + (Math.random() - 0.5) * 0.15)), at + dur);
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(v.vol * 0.35, at + dur * 0.25);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+      // Duas faixas de formante dão a cor de vogal; mudam por sílaba.
+      const vogal = 0.8 + Math.random() * 0.5;
+      for (const [fm, q] of [[v.formantes[0] * vogal, 5], [v.formantes[1] * (1.3 - (vogal - 0.8)), 7]] as const) {
+        const bp = c.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = fm;
+        bp.Q.value = q;
+        o.connect(bp);
+        bp.connect(g);
+      }
+      g.connect(bus);
+      o.start(at);
+      o.stop(at + dur + 0.03);
+      if (v.aspereza > 0) this.ruidoFiltrado(c, at, dur * 0.8, 'bandpass', v.formantes[0] * 1.5, v.vol * v.aspereza * 0.25, bus);
+      at += dur * (0.9 + Math.random() * 0.5);
+    }
   }
 
   tocarEfeito(nome: Efeito): void {
     const c = this.ctx;
     const bus = this.efeitosBus;
     if (!c || !bus || c.state !== 'running') return;
+    const vars = this.variantes(`sfx/${nome}`);
+    if (vars.length) {
+      const k = vars[Math.floor(Math.random() * vars.length)];
+      if (this.tocarArquivo(k, 1, bus)) return;
+    }
     const t = c.currentTime;
     const som = SONS[nome];
     if (som) som(this, c, bus, t);
@@ -249,6 +562,7 @@ class Motor {
   private agendar(): void {
     const a = this.atual;
     const c = this.ctx;
+    if (c) this.agendarCena(c);
     if (!a || !c) return;
     const limite = c.currentTime + 0.15;
     const dur = 60 / a.trilha.bpm / 2; // colcheia
@@ -498,6 +812,8 @@ export const audio = {
   desbloquear: (): void => motor.desbloquear(),
   tocarTrilha: (nome: string): void => motor.tocarTrilha(nome),
   tocarEfeito: (nome: Efeito): void => motor.tocarEfeito(nome),
+  cena: (nome: Cena | null): void => motor.cena(nome),
+  aplicarCena: (): void => motor.aplicarCena(),
   definirPrefs: (p: Partial<Prefs>): void => motor.definirPrefs(p),
   prefs: (): Prefs => motor.prefsAtuais(),
 };
