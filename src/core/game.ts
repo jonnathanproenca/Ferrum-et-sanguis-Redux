@@ -23,6 +23,7 @@ import {
   separarId,
   comQualidade,
   QUALIDADE_MAX,
+  AJUSTE_RIVAL,
   ITENS,
   paraLutador,
   precoGladiador,
@@ -80,6 +81,8 @@ export interface Arena {
   batalhasMin: number;
   /** Acréscimo de dificuldade sobre a arena anterior (0.2 = +20%); no Poço, sobre a base. */
   dificuldade: number;
+  /** Nível dos rivais: acompanha o do gladiador, mas fica entre estes limites (impede que farmar nível endureça a arena sem fim). */
+  nivelRival: [number, number];
 }
 export const ARENAS = arenasJson as unknown as Arena[];
 
@@ -146,6 +149,19 @@ const NOME_EFEITO: Record<TipoEfeito, string> = {
 
 // ---------- Estado ----------
 
+export interface Estatisticas {
+  ouroGanho: number;
+  mortes: number;
+  recrutados: number;
+  /** Tempo de jogo com a aba visível, em milissegundos. */
+  tempoMs: number;
+}
+
+export function estatisticas(e: Estado): Estatisticas {
+  if (!e.estat) e.estat = { ouroGanho: 0, mortes: 0, recrutados: 0, tempoMs: 0 };
+  return e.estat;
+}
+
 export interface Estado {
   versao: 4;
   semente: number;
@@ -180,6 +196,8 @@ export interface Estado {
   escolhaLanista?: string | null;
   /** Tópicos do tutorial já vistos. Ausente em saves antigos. */
   tutorial?: { vistos: string[] };
+  /** Números da campanha para a tela final. Ausente em saves antigos. */
+  estat?: Estatisticas;
   /** Cheat mode (destravado na seleção de lanista): ajuda para testar as funções sem jogar. */
   cheats?: Partial<Cheats>;
   log: string[];
@@ -201,17 +219,20 @@ export interface RegrasDificuldade {
   /** Força dos rivais em Pompeia e quanto cada arena acima soma (multiplica o acréscimo do arenas.json). */
   arenaBase: number;
   arenaFator: number;
+  /** Campanha: multiplicador dos requisitos (vitórias exigidas) e força do campeão rival em cada passo (calibrado por scripts/calibrar-campanha.ts). */
+  campReq: number;
+  campMult: number[];
   resumo: string;
 }
 
 export const REGRAS: Record<Dificuldade, RegrasDificuldade> = {
-  facil: { nome: 'Fácil', campeao: 0, lenda: 3, liberdade: null, precos: 0.8, arenaBase: 0.9, arenaFator: 0.6,
+  facil: { nome: 'Fácil', campeao: 0, lenda: 3, liberdade: null, precos: 0.8, arenaBase: 0.9, arenaFator: 0.7, campReq: 0.7, campMult: [0.55, 0.5, 0.74, 0.83, 0.95, 1.04, 1.08, 1.06, 1.32, 1.01],
     resumo: 'Já começa com campeão. Lenda com 3 vitórias. Nunca é libertado. Preços −20%, rivais mais fracos.' },
-  medio: { nome: 'Médio', campeao: 3, lenda: 9, liberdade: null, precos: 1, arenaBase: 1, arenaFator: 1,
+  medio: { nome: 'Médio', campeao: 3, lenda: 9, liberdade: null, precos: 1, arenaBase: 1, arenaFator: 1, campReq: 1, campMult: [0.6, 0.89, 1.03, 1.12, 1.12, 1.31, 1.21, 1.27, 1.45, 1.18],
     resumo: 'Campeão com 3 vitórias, lenda com 9. Nunca é libertado. Preços e rivais padrão.' },
-  dificil: { nome: 'Difícil', campeao: 6, lenda: 15, liberdade: 30, precos: 1.25, arenaBase: 1.1, arenaFator: 1.25,
+  dificil: { nome: 'Difícil', campeao: 6, lenda: 15, liberdade: 30, precos: 1.25, arenaBase: 1.05, arenaFator: 1.15, campReq: 1.6, campMult: [0.65, 0.94, 1.06, 1.14, 1.17, 1.35, 1.24, 1.29, 1.47, 1.22],
     resumo: 'Campeão com 6 vitórias, lenda com 15. Libertado após 30 lutas como lenda. Preços +25%, rivais mais fortes.' },
-  extremo: { nome: 'Extremo', campeao: 15, lenda: 45, liberdade: 5, precos: 1.6, arenaBase: 1.25, arenaFator: 1.6,
+  extremo: { nome: 'Extremo', campeao: 15, lenda: 45, liberdade: 5, precos: 1.6, arenaBase: 1.1, arenaFator: 1.3, campReq: 2.4, campMult: [1.03, 1.21, 1.37, 1.25, 1.39, 1.45, 1.41, 1.38, 1.64, 1.25],
     resumo: 'Campeão com 15 vitórias, lenda com 45. Libertado após só 5 lutas como lenda. Preços +60%, rivais brutais.' },
 };
 
@@ -416,9 +437,13 @@ export const FINAIS: Lanista[] = [
 export const NOME_CAMPEAO_FINAL = 'Espártaco';
 
 /** Campeão do lanista rival; o de Batiatus é Espártaco. */
-function criarCampeaoRival(rng: Rng, l: Lanista): Gladiador {
-  const nivel = l.id === 'batiatus' ? 8 : 4;
-  const g = gerarGladiador(rng, `campeao-${l.id}`, l.especialidade, nivel, 'livre', true);
+/** Nível e qualidade máxima das peças do campeão rival em cada passo da campanha: quem vem depois é mais forte. */
+export const CAMPEAO_NIVEL = [1, 2, 3, 5, 6, 8, 10, 11, 13, 15];
+export const CAMPEAO_QUALIDADE = [0, 0, 0, 1, 1, 2, 2, 3, 3, 4];
+
+function criarCampeaoRival(rng: Rng, l: Lanista, indice: number): Gladiador {
+  const i = Math.max(0, Math.min(CAMPEAO_NIVEL.length - 1, indice));
+  const g = gerarGladiador(rng, `campeao-${l.id}`, l.especialidade, CAMPEAO_NIVEL[i], 'livre', true, CAMPEAO_QUALIDADE[i]);
   if (l.id === 'batiatus') g.nome = NOME_CAMPEAO_FINAL;
   return g;
 }
@@ -477,12 +502,13 @@ export function novoJogo(semente: number = Date.now() % 2147483646, casaId?: str
   const casa = lanistaDaCasa(e);
   const bOuro = bonusDaCasa(e, 'ouroInicial');
   if (bOuro) e.ouro += bOuro.valor;
+  estatisticas(e);
   const nivelCampeao = 4 + (bonusDaCasa(e, 'campeaoNivel')?.valor ?? 0);
 
   e.gladiadores.push(gerarGladiador(rng, novoId(e), casa.especialidade, nivelCampeao, 'livre', regrasDe(e).campeao === 0));
-  for (const l of filaLanistas(e)) {
-    e.campeoesRivais[l.id] = criarCampeaoRival(rng, l);
-  }
+  filaLanistas(e).forEach((l, i) => {
+    e.campeoesRivais[l.id] = criarCampeaoRival(rng, l, i);
+  });
   gerarMercado(e);
   gerarArmeiroMestre(e);
   registrar(e, `Você comanda ${casa.nome}, casa de ${CLASSES[casa.especialidade].nome}. Dificuldade ${regrasDe(e).nome}: ${regrasDe(e).campeao === 0 ? 'seu primeiro gladiador já é o campeão' : `com ${regrasDe(e).campeao} vitórias, um deles será o campeão`}.`);
@@ -600,6 +626,7 @@ export function avancarTurno(e: Estado): void {
   if (campeao && campeao.vivo) {
     patrocinio = Math.round((20 + 5 * campeao.vitorias) * (bonusDaCasa(e, 'patrocinio')?.valor ?? 1));
     e.ouro += patrocinio;
+    estatisticas(e).ouroGanho += patrocinio;
   }
 
   const vivos = e.gladiadores.filter((g) => g.vivo).length;
@@ -662,6 +689,7 @@ export function recrutar(e: Estado, id: string): void {
   pagar(e, 0, precoRecruta(e, g));
   e.mercado.splice(idx, 1);
   e.gladiadores.push(g);
+  estatisticas(e).recrutados += 1;
   registrar(e, g.semEstilo ? `${g.nome} foi comprado. Escolha o estilo em que ele vai lutar.` : `${g.nome} (${CLASSES[g.classe].nome}) foi recrutado.`);
 }
 
@@ -825,11 +853,10 @@ function disputar(e: Estado, d: Disputa): PayloadLuta {
 
   const detalhes: string[] = [];
   for (const g of [...d.ladoA]) {
-    if (!g.vivo && g.lenda) {
+    if (!g.vivo) {
+      estatisticas(e).mortes += 1;
       removerGladiador(e, g);
-      detalhes.push(`${g.nome}, lenda, caiu e deixou o ludus.`);
-    } else if (!g.vivo) {
-      detalhes.push(`${g.nome} morreu.`);
+      detalhes.push(g.lenda ? `${g.nome}, lenda, caiu e deixou o ludus.` : `${g.nome} morreu e foi enterrado.`);
     }
     if (vitoria) g.vitorias += 1;
     else g.derrotas += 1;
@@ -859,6 +886,7 @@ function disputar(e: Estado, d: Disputa): PayloadLuta {
     const mult = d.poco ? bonusDaCasa(e, 'ouroPoco') : d.mortal ? undefined : bonusDaCasa(e, 'ouroArena');
     if (mult) ouro = Math.round(ouro * mult.valor);
     e.ouro += ouro;
+    estatisticas(e).ouroGanho += ouro;
     for (const g of [...d.ladoA]) if (g.vivo) marcos.push(...aplicarMarcos(e, g));
   }
   for (const g of [...d.ladoA]) if (g.vivo) marcos.push(...aplicarLiberdade(e, g));
@@ -886,13 +914,16 @@ function disputar(e: Estado, d: Disputa): PayloadLuta {
 }
 
 /** Rivais mais fortes chegam com peças melhoradas. */
-function qualidadeRival(nivel: number): number {
-  return Math.min(QUALIDADE_MAX, Math.floor(nivel / 3));
+function qualidadeRival(nivel: number, arena?: Arena): number {
+  const doNivel = Math.floor(nivel / AJUSTE_RIVAL.divisorQualidade);
+  // Arenas melhores têm rivais com peças melhores mesmo contra gladiadores de nível baixo.
+  const daArena = arena ? Math.min(AJUSTE_RIVAL.qualidadeArena.length - 1, ARENAS.filter((a) => a.honra).findIndex((a) => a.id === arena.id) + (arena.honra ? 0 : 2)) : 0;
+  return Math.min(QUALIDADE_MAX, doNivel + AJUSTE_RIVAL.qualidadeArena[Math.max(0, daArena)]);
 }
 
-function gerarRival(e: Estado, rng: Rng, nivel: number, origem: OrigemTipo): Gladiador {
+function gerarRival(e: Estado, rng: Rng, nivel: number, origem: OrigemTipo, arena?: Arena): Gladiador {
   const classe = CLASSES_IDS[rng.int(0, CLASSES_IDS.length - 1)];
-  return gerarGladiador(rng, novoId(e), classe, nivel, origem, false, qualidadeRival(nivel));
+  return gerarGladiador(rng, novoId(e), classe, nivel, origem, false, qualidadeRival(nivel, arena));
 }
 
 /** Arena de honra ou Poço: rendição. A equipe é de 1 ou 2 gladiadores. */
@@ -917,7 +948,8 @@ export function lutarArena(e: Estado, gladIds: string[], arenaId: string): Paylo
 
   const rng = proximoRng(e);
   const origem: OrigemTipo = arena.honra ? 'livre' : 'escravo';
-  const ladoB = ladoA.map(() => gerarRival(e, rng, ladoA[0].nivel, origem));
+  const nivelRival = Math.min(arena.nivelRival[1], Math.max(arena.nivelRival[0], ladoA[0].nivel));
+  const ladoB = ladoA.map(() => gerarRival(e, rng, nivelRival, origem, arena));
   if (e.libertados.length > 0 && rng.next() < CHANCE_LIBERTO) {
     const base = e.libertados[rng.int(0, e.libertados.length - 1)];
     ladoB[0] = { ...base, id: novoId(e), vivo: true, efeitos: [], campeao: false, lenda: false };
@@ -988,15 +1020,21 @@ export function textoRequisito(r: Requisito): string {
   }
 }
 
+/** Quantidade exigida pelo requisito, já na escala da dificuldade. */
+export function valorRequisito(e: Estado, r: Requisito): number {
+  return Math.max(1, Math.ceil((r.valor ?? 0) * regrasDe(e).campReq));
+}
+
 function cumpre(e: Estado, r: Requisito): boolean {
   const vivos = e.gladiadores.filter((g) => g.vivo);
+  const v = valorRequisito(e, r);
   switch (r.tipo) {
     case 'vitoriasTotais':
-      return e.vitoriasTotais >= (r.valor ?? 0);
+      return e.vitoriasTotais >= v;
     case 'gladiadorVitorias':
-      return vivos.some((g) => g.vitorias >= (r.valor ?? 0) && (!r.classe || g.classe === r.classe));
+      return vivos.some((g) => g.vitorias >= v && (!r.classe || g.classe === r.classe));
     case 'gladiadorPoco':
-      return vivos.some((g) => g.vitoriasPoco >= (r.valor ?? 0));
+      return vivos.some((g) => g.vitoriasPoco >= v);
     case 'gladiadorEquipado':
       return vivos.some((g) => Object.values(g.equipamento).includes(r.item ?? ''));
   }
@@ -1009,10 +1047,10 @@ export function proximoDesafio(e: Estado): Desafio | null {
   const lanista = sequencia[e.campanha];
   if (!e.campeoesRivais[lanista.id]) {
     // Saves antigos não têm o campeão de Batiatus (Espártaco).
-    e.campeoesRivais[lanista.id] = criarCampeaoRival(proximoRng(e), lanista);
+    e.campeoesRivais[lanista.id] = criarCampeaoRival(proximoRng(e), lanista, e.campanha);
   }
   const ignora = !!e.cheats?.campanha;
-  const requisitos = passo.requisitos.map((r) => ({ texto: textoRequisito(r), ok: ignora || cumpre(e, r) }));
+  const requisitos = passo.requisitos.map((r) => ({ texto: textoRequisito({ ...r, valor: valorRequisito(e, r) }), ok: ignora || cumpre(e, r) }));
   return {
     lanista,
     sequencia,
@@ -1021,6 +1059,16 @@ export function proximoDesafio(e: Estado): Desafio | null {
     requisitos,
     pronto: requisitos.every((r) => r.ok),
   };
+}
+
+/** Força do campeão rival: cresce a cada passo da campanha e conforme a dificuldade, somada à regra do passo. */
+function bonusCampanha(e: Estado, rival: Gladiador, indice: number, regra: Partial<Stats>): Partial<Stats> {
+  const r = regrasDe(e);
+  const mult = r.campMult[Math.min(indice, r.campMult.length - 1)];
+  const base = statsDoGladiador(rival);
+  const out: Partial<Stats> = {};
+  for (const a of ATRIBUTOS) out[a] = Math.round(base[a] * (mult - 1)) + (regra[a] ?? 0);
+  return out;
 }
 
 /** Lutas dos lanistas: sempre até a morte. O formato (1 ou 2) vem do passo da campanha. */
@@ -1052,7 +1100,7 @@ export function lutarCampanha(e: Estado, gladIds: string[]): PayloadLuta {
     ladoA,
     ladoB,
     especialidadeB: lanista.especialidade,
-    bonusB: regra.bonus,
+    bonusB: bonusCampanha(e, ladoB[0], desafio.indice, regra.bonus),
     arena: arenaPorId(regra.efeitosPoco ? 'poco' : 'coliseu'),
     titulo: `${desafio.passo.titulo}: ${regra.nome}`,
     trilha: regra.efeitosPoco ? 'poco' : `campanha:${lanista.id}`,
@@ -1119,10 +1167,11 @@ export function venderGladiador(e: Estado, id: string): void {
   if (g.campeao) throw new Error('O campeão do ludus não pode ser vendido.');
   if (g.lenda) throw new Error('A lenda não é vendida: só deixa o ludus pela liberdade.');
   if (g.origem !== 'escravo') throw new Error('Só escravos são vendidos.');
-  if (!g.vivo) throw new Error('Gladiador morto não pode ser vendido. Dispense-o.');
+  if (!g.vivo) throw new Error('Gladiador morto não pode ser vendido.');
   const valor = Math.max(20, Math.round((precoGladiador(g) * regrasDe(e).precos) / 2));
   removerGladiador(e, g);
   e.ouro += valor;
+  estatisticas(e).ouroGanho += valor;
   registrar(e, `${g.nome} foi vendido por ${valor} de ouro.`);
 }
 

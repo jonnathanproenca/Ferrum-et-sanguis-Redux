@@ -9,7 +9,7 @@ Soltar o arquivo em `public/assets/audio/` basta: o jogo lista a pasta sozinho (
 | `musica/upgrades`, `mercado`, `armeiro`, `enfermaria` | Cada aba | opcional; sem ela usa `gestao` |
 | `musica/pompeia`, `capua`, `poco`, `coliseu` | Arenas (pública crescente) | loop |
 | `musica/campanha` | Batalhas de lanista | loop; sem ela usa `coliseu` |
-| `sfx/<efeito>` | clique, golpe, critico, esquiva, bloqueio, morte, efeito, atordoado, moeda, madeira, parede, recrutar, vitoria, derrota, lenda, liberdade, erro | variantes: `sfx/golpe-1`, `golpe-2`... sorteadas |
+| `sfx/<efeito>` | clique, golpe, critico, esquiva, bloqueio, morte, efeito, atordoado, bocejo (alojamentos), moeda, madeira, parede, recrutar, vitoria, derrota, lenda, liberdade, erro | variantes: `sfx/golpe-1`, `golpe-2`... sorteadas |
 | `cena/bigorna` | Armeiro, a cada pancada (2,688 s; impacto em 1,05 s do vídeo) | uma pancada só, ataque no começo do arquivo; aceita variantes |
 | `ambiente/fogo` | Armeiro | loop, volume baixo |
 | `ambiente/mercado` | Mercado | loop de multidão |

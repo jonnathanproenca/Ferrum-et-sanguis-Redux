@@ -226,6 +226,9 @@ export function sortearEquipamento(rng: Rng, classe: ClasseId, qualMax = 0): Equ
   return eq;
 }
 
+/** Ajustes de balanceamento dos rivais livres (a simulação em scripts/ varre estes valores). */
+export const AJUSTE_RIVAL = { treinoPorNivel: 1, divisorQualidade: 4, qualidadeArena: [0, 1, 2] };
+
 /** Escravos têm poucos pontos de treino (qualidade variável); livres já vêm progredidos. */
 export function gerarGladiador(
   rng: Rng,
@@ -237,7 +240,7 @@ export function gerarGladiador(
   qualMax = 0,
 ): Gladiador {
   const treino: Stats = { forca: 0, agilidade: 0, vitalidade: 0, sorte: 0 };
-  const pontos = origem === 'livre' ? (nivel - 1) * 2 + rng.int(0, 2) : rng.int(0, 2);
+  const pontos = origem === 'livre' ? Math.round((nivel - 1) * AJUSTE_RIVAL.treinoPorNivel) + rng.int(0, 2) : rng.int(0, 2);
   for (let i = 0; i < pontos; i++) {
     treino[ATRIBUTOS[rng.int(0, ATRIBUTOS.length - 1)]] += 1;
   }
@@ -280,8 +283,11 @@ export function gerarEscravo(rng: Rng, id: string): Gladiador {
   return g;
 }
 
+/** Teto de nível: depois dele só treino e equipamento aumentam o poder (impede inflar o gladiador farmando luta). */
+export const NIVEL_MAXIMO = 15;
+
 export function atualizarNivel(g: Gladiador): void {
-  g.nivel = Math.max(g.nivel, 1 + Math.floor(g.xp / 50));
+  g.nivel = Math.min(NIVEL_MAXIMO, Math.max(g.nivel, 1 + Math.floor(g.xp / 50)));
 }
 
 export function somaTreino(g: Gladiador): number {

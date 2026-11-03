@@ -10,7 +10,11 @@
       30
     ],
     "batalhasMin": 0,
-    "dificuldade": 0
+    "dificuldade": 0,
+    "nivelRival": [
+      1,
+      5
+    ]
   },
   {
     "id": "capua",
@@ -23,7 +27,11 @@
       60
     ],
     "batalhasMin": 8,
-    "dificuldade": 0.2
+    "dificuldade": 0.15,
+    "nivelRival": [
+      3,
+      9
+    ]
   },
   {
     "id": "coliseu",
@@ -36,7 +44,11 @@
       120
     ],
     "batalhasMin": 24,
-    "dificuldade": 0.25
+    "dificuldade": 0.2,
+    "nivelRival": [
+      6,
+      14
+    ]
   },
   {
     "id": "poco",
@@ -55,6 +67,10 @@
       75
     ],
     "batalhasMin": 0,
-    "dificuldade": 0.1
+    "dificuldade": 0.3,
+    "nivelRival": [
+      1,
+      8
+    ]
   }
 ]

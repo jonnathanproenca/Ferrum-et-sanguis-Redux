@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   aplicarMarcos,
+  estatisticas,
+  valorRequisito,
   custoMelhoria,
   extraDaCasa,
   LANISTAS,
@@ -797,10 +799,10 @@ describe('campeão por vitórias, arenas por fama e dificuldade', () => {
     expect(() => lutarArena(e, [g.id], 'coliseu')).toThrow(/batalhas/);
   });
 
-  it('a dificuldade se acumula: Pompeia 1, Cápua +20%, Coliseu +25% por cima', () => {
+  it('a dificuldade se acumula: Pompeia 1, Cápua +15%, Coliseu +20% por cima', () => {
     expect(multiplicadorArena(arenaPorId('pompeia'))).toBe(1);
-    expect(multiplicadorArena(arenaPorId('capua'))).toBeCloseTo(1.2);
-    expect(multiplicadorArena(arenaPorId('coliseu'))).toBeCloseTo(1.5);
+    expect(multiplicadorArena(arenaPorId('capua'))).toBeCloseTo(1.15);
+    expect(multiplicadorArena(arenaPorId('coliseu'))).toBeCloseTo(1.38);
   });
 });
 
@@ -834,5 +836,41 @@ describe('cheat mode', () => {
     e.cheats = { lendario: true };
     gerarArmeiroMestre(e);
     for (const id of e.armeiroMestre as string[]) expect(itemPorId(id).qualidade).toBe(4);
+  });
+});
+
+describe('morte, estatísticas e escala da campanha', () => {
+  it('quem morre numa luta mortal sai do ludus na hora e entra na contagem de mortes', () => {
+    const e = novoJogo(555, 'batiatus-nao', { dificuldade: 'extremo' });
+    e.cheats = { energia: true, campanha: true };
+    e.campanha = PASSOS.length - 1;
+    const g = e.gladiadores[0];
+    g.semEstilo = false;
+    const antes = e.gladiadores.length;
+    const p = lutarCampanha(e, [g.id]);
+    expect(p.vitoriaA).toBe(false);
+    expect(e.gladiadores.some((x) => x.id === g.id)).toBe(false);
+    expect(e.gladiadores.length).toBe(antes - 1);
+    expect(estatisticas(e).mortes).toBe(1);
+  });
+
+  it('os requisitos da campanha crescem com a dificuldade', () => {
+    const r = PASSOS[4].requisitos[0];
+    const base = novoJogo(1, undefined, { dificuldade: 'medio' });
+    const dura = novoJogo(1, undefined, { dificuldade: 'extremo' });
+    const facil = novoJogo(1, undefined, { dificuldade: 'facil' });
+    expect(valorRequisito(base, r)).toBe(r.valor);
+    expect(valorRequisito(dura, r)).toBeGreaterThan(valorRequisito(base, r));
+    expect(valorRequisito(facil, r)).toBeLessThan(valorRequisito(base, r));
+  });
+
+  it('o ouro ganho em vitórias entra nas estatísticas', () => {
+    const e = novoJogo(77);
+    e.cheats = { energia: true, vencer: true };
+    e.gladiadores[0].semEstilo = false;
+    const antes = estatisticas(e).ouroGanho;
+    const p = lutarArena(e, [e.gladiadores[0].id], 'pompeia');
+    expect(p.vitoriaA).toBe(true);
+    expect(estatisticas(e).ouroGanho).toBe(antes + p.ouro);
   });
 });

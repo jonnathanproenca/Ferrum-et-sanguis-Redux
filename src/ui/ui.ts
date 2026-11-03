@@ -42,6 +42,8 @@ import {
   treinar,
   venderGladiador,
   dispensarGladiador,
+  estatisticas,
+  batalhasDoLudus,
   arenaLiberada,
   multiplicadorArena,
   regrasDe,
@@ -167,6 +169,13 @@ export function montarUi(raiz: HTMLElement, opcoes: {
 }): void {
   new MutationObserver(() => { pixelarImagens(raiz); colorirSprites(raiz); }).observe(raiz, { childList: true, subtree: true });
   let e: Estado | null = null;
+  // Tempo de jogo: conta só com a aba visível e com um ludus em andamento.
+  setInterval(() => {
+    if (!e || menuAberto || escolhendo || document.visibilityState !== 'visible') return;
+    const st = estatisticas(e);
+    st.tempoMs += 1000;
+    if (st.tempoMs % 15000 === 0) salvar(e);
+  }, 1000);
   let aba: Aba = 'ludus';
   let menuAberto = true;
   let escolhendo = false;
@@ -281,7 +290,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
             g.vivo && g.origem === 'escravo'
               ? `<button class="btn" data-acao="vender" data-id="${g.id}">Vender · ${Math.max(20, Math.round((precoGladiador(g) * regrasDe(s).precos) / 2))} ouro</button>`
               : ''
-          }${morto ? `<button class="btn" data-acao="dispensar" data-id="${g.id}">Enterrar</button>` : ''}</div>`;
+          }</div>`;
 
     const chaveDetalhes = `eq-${g.id}`;
     return `<article id="g-${g.id}" class="card ${morto ? 'morto' : ''} ${g.campeao ? 'campeao' : ''}">
@@ -696,11 +705,44 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     return `${seletorEquipe(s, 'Escalação para a arena', 2)}<div class="grade">${cards}</div>`;
   }
 
+  function tempoJogado(ms: number): string {
+    const min = Math.floor(ms / 60000);
+    const h = Math.floor(min / 60);
+    return h > 0 ? `${h} h ${String(min % 60).padStart(2, '0')} min` : `${Math.max(1, min)} min`;
+  }
+
+  function resumoFinal(s: Estado): string {
+    const st = estatisticas(s);
+    const lutas = batalhasDoLudus(s);
+    const casa = lanistaDaCasa(s);
+    const dados: [string, string][] = [
+      ['Tempo de jogo', tempoJogado(st.tempoMs)],
+      ['Ouro acumulado', `${st.ouroGanho.toLocaleString('pt-BR')} ouro`],
+      ['Lutas', String(lutas)],
+      ['Vitórias', String(s.vitoriasTotais)],
+      ['Derrotas', String(Math.max(0, lutas - s.vitoriasTotais))],
+      ['Rodadas', String(s.turno)],
+      ['Gladiadores recrutados', String(st.recrutados)],
+      ['Gladiadores mortos', String(st.mortes)],
+      ['Libertos', String(s.libertados.length)],
+      ['Dificuldade', regrasDe(s).nome],
+    ];
+    const elenco = [...s.gladiadores].sort((a, b) => b.vitorias - a.vitorias).map((g) =>
+      `<li><b>${esc(g.nome)}</b> · ${esc(g.semEstilo ? 'sem estilo' : CLASSES[g.classe].nome)} · nível ${g.nivel} · ${g.vitorias} vitória${g.vitorias === 1 ? '' : 's'}${g.lenda ? ' · lenda' : g.campeao ? ' · campeão' : ''}</li>`).join('');
+    return `<section class="camp"><div class="camp-fim">
+      <small>Fim da campanha</small>
+      <h2>Roma se curva ao ${esc(casa.nome)}</h2>
+      <p>Você derrotou todos os lanistas, de Pompeia até Lêntulo Batiatus e seu campeão Espártaco.</p>
+      <div class="fim-grade">${dados.map(([k, v]) => `<div><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`).join('')}</div>
+      ${elenco ? `<h3>Seu ludus</h3><ul class="fim-elenco">${elenco}</ul>` : ''}
+      <button class="btn grande primario" data-acao="novo">Nova campanha</button>
+    </div></section>`;
+  }
+
   function campanha(s: Estado): string {
     const d = proximoDesafio(s);
     if (!d) {
-      return `<section class="camp"><div class="camp-fim"><h2>Campanha concluída</h2>
-        <p>Você venceu todos os lanistas da fila. O nome do seu ludus ecoa por Roma.</p></div></section>`;
+      return resumoFinal(s);
     }
     const formato = d.passo.formato ?? 1;
     const sel = equipeValida(s);
@@ -1139,7 +1181,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
           painelLudus = null;
           portaoAberto = false;
           animCompra = { id, t0: Date.now() };
-          audio.tocarEfeito(id === 'armaria' ? 'parede' : COM_TABUAS.includes(id) ? 'madeira' : 'moeda');
+          audio.tocarEfeito(id === 'armaria' ? 'parede' : id === 'alojamentos' ? 'bocejo' : COM_TABUAS.includes(id) ? 'madeira' : 'moeda');
           window.setTimeout(() => {
             if (animCompra?.id === id) animCompra = null;
           }, DURACAO_COMPRA * 1000 + 300);

@@ -9,7 +9,7 @@
 
 export type Efeito =
   | 'clique' | 'golpe' | 'critico' | 'esquiva' | 'bloqueio' | 'morte' | 'efeito' | 'atordoado'
-  | 'cheat' | 'moeda' | 'madeira' | 'parede' | 'recrutar' | 'vitoria' | 'derrota' | 'lenda' | 'liberdade' | 'erro';
+  | 'cheat' | 'bocejo' | 'moeda' | 'madeira' | 'parede' | 'recrutar' | 'vitoria' | 'derrota' | 'lenda' | 'liberdade' | 'erro';
 
 export interface Prefs {
   ativo: boolean;
