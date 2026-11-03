@@ -178,7 +178,25 @@ export interface Gladiador {
   vitoriasPoco: number;
   derrotas: number;
   efeitos: EfeitoPersistente[];
+  /** Escravo recém-recrutado: ainda sem estilo, sem equipamento e fora das arenas até escolher um estilo. */
+  semEstilo?: boolean;
+  /** Atributo em que o escravo é naturalmente forte (já somado ao treino inicial). */
+  tendencia?: Atributo;
+  /** Condição física do escravo no mercado. */
+  condicao?: Condicao;
 }
+
+export type Condicao = 'jovem' | 'maduro' | 'cicatrizado';
+
+export const NOME_CONDICAO: Record<Condicao, string> = { jovem: 'Jovem', maduro: 'Maduro', cicatrizado: 'Cicatrizado' };
+export const DESC_CONDICAO: Record<Condicao, string> = {
+  jovem: '+1 treino em atributo aleatório, mais caro',
+  maduro: 'equilibrado',
+  cicatrizado: '+1 vitalidade, mais barato',
+};
+/** Ajuste de preço de cada condição, em ouro. */
+const PRECO_CONDICAO: Record<Condicao, number> = { jovem: 20, maduro: 0, cicatrizado: -20 };
+export const TENDENCIA_PONTOS = 2;
 
 const NOMES = [
   'Ático', 'Brenno', 'Cássio', 'Dárdano', 'Espúrio', 'Flávio', 'Gracco', 'Hélvio', 'Ícaro', 'Juba',
@@ -238,6 +256,22 @@ export function gerarGladiador(
     derrotas: 0,
     efeitos: [],
   };
+}
+
+/** Escravo do mercado: sem estilo e sem equipamento, com uma tendência de atributo, terra e condição física. */
+export function gerarEscravo(rng: Rng, id: string): Gladiador {
+  const g = gerarGladiador(rng, id, 'murmilo', 1, 'escravo');
+  g.semEstilo = true;
+  g.equipamento = equipamentoVazio();
+  const tendencia = ATRIBUTOS[rng.int(0, ATRIBUTOS.length - 1)];
+  g.tendencia = tendencia;
+  g.treino[tendencia] += TENDENCIA_PONTOS;
+  const condicoes: Condicao[] = ['jovem', 'maduro', 'cicatrizado'];
+  const condicao = condicoes[rng.int(0, condicoes.length - 1)];
+  g.condicao = condicao;
+  if (condicao === 'jovem') g.treino[ATRIBUTOS[rng.int(0, ATRIBUTOS.length - 1)]] += 1;
+  if (condicao === 'cicatrizado') g.treino.vitalidade += 1;
+  return g;
 }
 
 export function atualizarNivel(g: Gladiador): void {
@@ -306,7 +340,7 @@ export function paraLutador(g: Gladiador, especialidade?: ClasseId, extra: Parti
 export function precoGladiador(g: Gladiador): number {
   return g.origem === 'livre'
     ? 220 + g.nivel * 40 + somaTreino(g) * 15
-    : 60 + somaTreino(g) * 15;
+    : Math.max(30, 60 + somaTreino(g) * 15 + (g.condicao ? PRECO_CONDICAO[g.condicao] : 0));
 }
 
 export function precoTroca(g: Gladiador): number {

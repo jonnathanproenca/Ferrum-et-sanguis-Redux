@@ -29,6 +29,8 @@ import {
   PASSOS,
   proximoDesafio,
   recrutar,
+  escolherEstilo,
+  gerarMercado,
   temMelhoria,
   tratar,
   treinar,
@@ -215,8 +217,9 @@ describe('equipamento por slot', () => {
 
   it('trocar de estilo mantém a qualidade das peças básicas', () => {
     const { e, campeao } = campeaoMurmilo(6);
-    const g = e.mercado.find((m) => m.classe !== 'retiario') as Gladiador;
+    const g = e.mercado[0];
     e.gladiadores.push(g);
+    escolherEstilo(e, g.id, 'murmilo');
     g.equipamento.arma = 'basico_arma_' + g.classe + '@2';
     trocarClasse(e, g.id, 'retiario');
     expect(g.equipamento.arma).toBe('basico_arma_retiario@2');
@@ -482,6 +485,7 @@ describe('Poço: valor fixo com bônus pela lotação', () => {
       recrutar(e, e.mercado[0].id);
       const g = e.gladiadores.find((x) => !x.campeao);
       if (!g) continue;
+      escolherEstilo(e, g.id, 'murmilo');
       const antes = e.ouro - 1; // a luta custa 1 de energia/ouro conforme a regra de `pagar`
       void antes;
       const ouroAntes = e.ouro;
@@ -529,6 +533,7 @@ describe('luta 2×2', () => {
     const e = novoJogo(semente);
     e.ouro = 2000;
     recrutar(e, e.mercado[0].id);
+    escolherEstilo(e, e.gladiadores[e.gladiadores.length - 1].id, 'tracio');
     return { e, ids: e.gladiadores.slice(0, 2).map((g) => g.id) };
   }
 
@@ -599,5 +604,54 @@ describe('bônus dos lanistas', () => {
     avancarTurno(nn);
     expect(ec.ouro).toBeGreaterThan(base.ouro);
     expect(nn.ouro).toBeGreaterThan(base.ouro);
+  });
+});
+
+describe('mercado de escravos', () => {
+  it('só vende escravos sem estilo, sem equipamento, com tendência e condição', () => {
+    const e = novoJogo(7);
+    expect(e.mercado).toHaveLength(5);
+    for (const g of e.mercado) {
+      expect(g.origem).toBe('escravo');
+      expect(g.semEstilo).toBe(true);
+      expect(g.tendencia).toBeTruthy();
+      expect(g.condicao).toBeTruthy();
+      expect(Object.values(g.equipamento).every((v) => v === null)).toBe(true);
+      expect(g.treino[g.tendencia as keyof typeof g.treino]).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it('escolher o estilo é grátis, sem energia, e dá o kit básico', () => {
+    const e = novoJogo(8);
+    e.ouro = 1000;
+    const g = e.mercado[0];
+    recrutar(e, g.id);
+    const energia = e.energia;
+    const ouro = e.ouro;
+    escolherEstilo(e, g.id, 'samnita');
+    expect(e.energia).toBe(energia);
+    expect(e.ouro).toBe(ouro);
+    expect(g.semEstilo).toBe(false);
+    expect(g.classe).toBe('samnita');
+    expect(g.equipamento.arma).toBe('basico_arma_samnita');
+    expect(() => escolherEstilo(e, g.id, 'tracio')).toThrow(/já tem um estilo/);
+  });
+
+  it('sem estilo não luta, não equipa e não troca de estilo', () => {
+    const e = novoJogo(9);
+    e.ouro = 1000;
+    e.melhorias = { armaria: true, alojamentos: true };
+    const g = e.mercado[0];
+    recrutar(e, g.id);
+    expect(() => lutarArena(e, [g.id], 'poco')).toThrow(/estilo/);
+    expect(() => trocarClasse(e, g.id, 'tracio')).toThrow(/estilo/);
+    e.inventario.push('basico_arma_murmilo');
+    expect(() => equipar(e, g.id, 'arma', 'basico_arma_murmilo')).toThrow(/estilo/);
+  });
+
+  it('gerarMercado renova com 5 escravos', () => {
+    const e = novoJogo(10);
+    gerarMercado(e);
+    expect(e.mercado.every((g) => g.semEstilo && g.origem === 'escravo')).toBe(true);
   });
 });

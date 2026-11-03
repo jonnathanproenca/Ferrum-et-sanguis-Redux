@@ -15,6 +15,7 @@ import {
   capacidadeLudus,
   comprarItem,
   comprarMestre,
+  precoRecruta,
   gerarArmeiroMestre,
   podeGastarEnergia,
   gameOver,
@@ -36,6 +37,7 @@ import {
   temMelhoria,
   tratar,
   trocarClasse,
+  escolherEstilo,
   treinar,
   venderGladiador,
   dispensarGladiador,
@@ -57,6 +59,9 @@ import {
   QUALIDADES,
   qualidadeDe,
   NOME_ATRIBUTO,
+  NOME_CONDICAO,
+  terraPorId,
+  DESC_CONDICAO,
   NOME_SLOT,
   precoGladiador,
   SLOTS,
@@ -121,6 +126,13 @@ function fmtItem(item: Item): string {
   return `${item.nome}${q}${peso} · ${fmtBonus(item.bonus)}`;
 }
 
+function caracteristicas(g: Gladiador): string {
+  const terra = terraPorId(g.terra).nome;
+  const t = g.tendencia ? `Tendência: ${NOME_ATRIBUTO[g.tendencia]}` : '';
+  const c = g.condicao ? NOME_CONDICAO[g.condicao] : '';
+  return [terra, t, c].filter(Boolean).join(' · ');
+}
+
 function nomeOrigem(g: Gladiador): string {
   if (g.campeao) return 'Campeão do ludus';
   return g.origem === 'livre' ? 'Livre' : 'Escravo';
@@ -145,7 +157,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
 
   /** Gladiadores escolhidos para a próxima luta (só os vivos). */
   function equipeValida(s: Estado): Gladiador[] {
-    const vivos = s.gladiadores.filter((g) => g.vivo);
+    const vivos = s.gladiadores.filter((g) => g.vivo && !g.semEstilo);
     equipe = equipe.filter((id) => vivos.some((g) => g.id === id));
     return equipe.map((id) => vivos.find((g) => g.id === id) as Gladiador);
   }
@@ -169,6 +181,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     const set = SPRITES_CLASSE[g.classe];
     const quadro = set?.quadros.guarda;
     if (!quadro) return '';
+    if (g.semEstilo) return `<img class="gladiador-img sprite-card sem-estilo" src="${quadro.arquivo}" alt="" draggable="false">`;
     return `<img class="gladiador-img sprite-card" data-sprite="${quadro.arquivo}" data-variante="${varianteDe(g.id)}" src="${quadro.arquivo}" style="--q:${cor}" alt="" draggable="false">`;
   }
 
@@ -184,8 +197,14 @@ export function montarUi(raiz: HTMLElement, opcoes: {
           .join('')}</div>`
       : '';
 
-    const acoes = g.vivo
+    const estiloEscolha = g.semEstilo
       ? `<div class="linha">
+          <select data-campo="estilo" aria-label="Estilo de luta">${CLASSES_IDS.map((c) => `<option value="${c}">${CLASSES[c].nome}</option>`).join('')}</select>
+          <button class="btn primario" data-acao="estilo" data-id="${g.id}">Definir estilo (grátis)</button>
+        </div>`
+      : '';
+    const acoes = g.vivo
+      ? `${estiloEscolha}<div class="linha">
           ${
             temMelhoria(s, 'palus')
               ? `<select data-campo="atributo" aria-label="Atributo para treinar">${ATRIBUTOS.map(
@@ -195,7 +214,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
               : '<span class="meta">Treino: construa os palus.</span>'
           }
           ${
-            g.campeao
+            g.campeao || g.semEstilo
               ? ''
               : `<select data-campo="classe" aria-label="Novo estilo">${CLASSES_IDS.filter((c) => c !== g.classe)
                   .map((c) => `<option value="${c}">${CLASSES[c].nome}</option>`)
@@ -239,16 +258,18 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     const chaveDetalhes = `eq-${g.id}`;
     return `<article id="g-${g.id}" class="card ${morto ? 'morto' : ''} ${g.campeao ? 'campeao' : ''}">
       <div class="thumb">${gladiadorImg(g)}</div>
-      <h3>${esc(g.nome)} <small>${esc(classe.nome)}</small> ${g.campeao ? '<span class="selo">Campeão</span>' : ''}${g.lenda ? '<span class="selo lenda">Lenda</span>' : ''}</h3>
-      <p class="meta">${esc(nomeOrigem(g))} · ${esc(nomeAparencia(ap))} · Nível ${g.nivel}${morto ? ' · morto' : ''}</p>
+      <h3>${esc(g.nome)} <small>${g.semEstilo ? 'Sem estilo' : esc(classe.nome)}</small> ${g.campeao ? '<span class="selo">Campeão</span>' : ''}${g.lenda ? '<span class="selo lenda">Lenda</span>' : ''}</h3>
+      <p class="meta">${esc(nomeOrigem(g))} · ${g.semEstilo ? esc(caracteristicas(g)) : esc(nomeAparencia(ap))} · Nível ${g.nivel}${morto ? ' · morto' : ''}</p>
       <p class="meta">Vitórias ${g.vitorias} · Poço ${g.vitoriasPoco} · Derrotas ${g.derrotas}</p>
-      <p class="passiva"><strong>${esc(classe.passivaNome)}:</strong> ${esc(classe.passivaDescricao)}</p>
+      ${g.semEstilo ? '<p class="passiva">Sem estilo: não luta nas arenas até você definir como ele vai lutar. O kit básico vem junto.</p>' : `<p class="passiva"><strong>${esc(classe.passivaNome)}:</strong> ${esc(classe.passivaDescricao)}</p>`}
       <p class="stats">${fmtStats(stats)}</p>
       ${efeitos}
       ${acoes}
       ${venda}
       ${
-        temMelhoria(s, 'armaria')
+        g.semEstilo
+          ? '<p class="meta">Equipamento: defina o estilo primeiro.</p>'
+          : temMelhoria(s, 'armaria')
           ? `<details data-chave="${chaveDetalhes}" ${abertos.has(chaveDetalhes) ? 'open' : ''}>
         <summary>Equipamento</summary>
         <div class="slots">${equip}</div>
@@ -456,17 +477,19 @@ export function montarUi(raiz: HTMLElement, opcoes: {
   }
 
   function cardMercado(s: Estado, g: Gladiador): string {
-    const preco = precoGladiador(g);
+    const preco = precoRecruta(s, g);
     const cheio = s.gladiadores.length >= capacidadeLudus(s);
     const semOuro = s.ouro < preco;
     const casa = lanistaDaCasa(s);
+    const cond = g.condicao ? `<p class="meta"><b>${NOME_CONDICAO[g.condicao]}</b>: ${esc(DESC_CONDICAO[g.condicao])}</p>` : '';
     return `<article class="card">
       <div class="thumb">${gladiadorImg(g)}</div>
-      <h3>${esc(g.nome)} <small>${esc(CLASSES[g.classe].nome)}</small></h3>
-      <p class="meta">${esc(nomeOrigem(g))} · ${esc(nomeAparencia(aparenciaDe(g)))} · Nível ${g.nivel}</p>
+      <h3>${esc(g.nome)} <small>Escravo</small></h3>
+      <p class="meta">${esc(caracteristicas(g))}</p>
+      ${cond}
       <p class="stats">${fmtStats(statsDoGladiador(g, casa.especialidade))}</p>
       <button class="btn primario" data-acao="recrutar" data-id="${g.id}" ${cheio || semOuro ? 'disabled' : ''}>
-        Recrutar · ${preco} ouro
+        Comprar · ${preco} ouro
       </button>
     </article>`;
   }
@@ -475,7 +498,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     const lotado = s.gladiadores.length >= capacidadeLudus(s) && capacidadeLudus(s) < MAX_GLADIADORES
       ? `<p class="aviso">Ludus lotado (${s.gladiadores.length}/${capacidadeLudus(s)}). Construa os alojamentos para ampliar.</p>`
       : '';
-    return `${lotado}<p class="meta">O mercado é renovado a cada turno. Escravos chegam com pouco treino; livres já vêm progredidos.</p>
+    return `${lotado}<p class="meta">O mercado vende escravos e é renovado a cada turno. Cada um traz uma tendência de atributo, uma terra e uma condição física. Depois de comprado, você escolhe o estilo em que ele vai lutar e ele recebe o kit básico.</p>
       <div class="grade">${s.mercado.map((g) => cardMercado(s, g)).join('')}</div>`;
   }
 
@@ -577,8 +600,8 @@ export function montarUi(raiz: HTMLElement, opcoes: {
 
   /** Escalação: faixa de cards dos gladiadores vivos; o toque põe/tira da equipe, na ordem do toque. */
   function seletorEquipe(s: Estado, titulo: string, maximo: number): string {
-    const vivos = s.gladiadores.filter((g) => g.vivo);
-    if (!vivos.length) return '<p class="aviso">Nenhum gladiador vivo.</p>';
+    const vivos = s.gladiadores.filter((g) => g.vivo && !g.semEstilo);
+    if (!vivos.length) return '<p class="aviso">Nenhum gladiador pronto para lutar: escolha o estilo dos escravos no ludus.</p>';
     const sel = equipeValida(s);
     const escolhidos = sel.length
       ? sel.map((g, i) => `<span class="escolhido"><b>${i + 1}</b> ${esc(g.nome)}</span>`).join('')
@@ -930,6 +953,9 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         return;
       case 'treinar':
         agir((s) => treinar(s, id, campo('atributo') as Atributo));
+        return;
+      case 'estilo':
+        agir((s) => escolherEstilo(s, id, campo('estilo') as ClasseId));
         return;
       case 'trocar':
         agir((s) => trocarClasse(s, id, campo('classe') as ClasseId));

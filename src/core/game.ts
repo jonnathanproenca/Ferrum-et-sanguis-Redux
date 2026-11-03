@@ -15,6 +15,8 @@ import {
   CLASSES_IDS,
   custoTratamento,
   gerarGladiador,
+  gerarEscravo,
+  sortearEquipamento,
   itemPorId,
   separarId,
   comQualidade,
@@ -357,15 +359,11 @@ export function novoJogo(semente: number = Date.now() % 2147483646, casaId?: str
   return e;
 }
 
+/** O mercado só vende escravos: sem estilo, com tendência de atributo, terra e condição. O estilo se escolhe depois. */
 export function gerarMercado(e: Estado): void {
   const rng = proximoRng(e);
   e.mercado = [];
-  for (let i = 0; i < 5; i++) {
-    const origem: OrigemTipo = i < 3 ? 'escravo' : 'livre';
-    const classe = CLASSES_IDS[rng.int(0, CLASSES_IDS.length - 1)];
-    const nivel = origem === 'escravo' ? rng.int(1, 2) : rng.int(2, 4);
-    e.mercado.push(gerarGladiador(rng, novoId(e), classe, nivel, origem));
-  }
+  for (let i = 0; i < 5; i++) e.mercado.push(gerarEscravo(rng, novoId(e)));
 }
 
 /** Sorteia as 3 ofertas do armeiro mestre (peças especiais de qualidade superior ou melhor). */
@@ -482,7 +480,7 @@ export function recrutar(e: Estado, id: string): void {
   pagar(e, 0, precoRecruta(e, g));
   e.mercado.splice(idx, 1);
   e.gladiadores.push(g);
-  registrar(e, `${g.nome} (${CLASSES[g.classe].nome}) foi recrutado.`);
+  registrar(e, g.semEstilo ? `${g.nome} foi comprado. Escolha o estilo em que ele vai lutar.` : `${g.nome} (${CLASSES[g.classe].nome}) foi recrutado.`);
 }
 
 export function comprarItem(e: Estado, itemId: string): void {
@@ -497,6 +495,7 @@ export function comprarItem(e: Estado, itemId: string): void {
 export function equipar(e: Estado, gladId: string, slot: Slot, itemId: string | null): void {
   exigirMelhoria(e, 'armaria');
   const g = achar(e, gladId);
+  exigirComEstilo(g);
   const antigo = g.equipamento[slot];
 
   if (itemId === null) {
@@ -516,9 +515,25 @@ export function equipar(e: Estado, gladId: string, slot: Slot, itemId: string | 
   g.equipamento[slot] = itemId;
 }
 
+/** Primeira escolha de estilo do escravo: grátis, sem energia; ele recebe o kit básico do estilo. */
+export function escolherEstilo(e: Estado, gladId: string, classe: ClasseId): void {
+  const g = achar(e, gladId);
+  exigirVivo(g);
+  if (!g.semEstilo) throw new Error('Este gladiador já tem um estilo. Para mudar, use "Trocar estilo".');
+  g.classe = classe;
+  g.semEstilo = false;
+  g.equipamento = sortearEquipamento(proximoRng(e), classe);
+  registrar(e, `${g.nome} vai lutar como ${CLASSES[classe].nome}, com o kit básico.`);
+}
+
+function exigirComEstilo(g: Gladiador): void {
+  if (g.semEstilo) throw new Error(`${g.nome} ainda não tem estilo: escolha-o no ludus antes de lutar ou trocar de equipamento.`);
+}
+
 export function trocarClasse(e: Estado, gladId: string, classe: ClasseId): void {
   const g = achar(e, gladId);
   exigirVivo(g);
+  exigirComEstilo(g);
   if (g.campeao) throw new Error('O campeão do ludus não muda de estilo.');
   if (classe === g.classe) throw new Error('O gladiador já luta neste estilo.');
 
@@ -700,6 +715,7 @@ export function lutarArena(e: Estado, gladIds: string[], arenaId: string): Paylo
   const ladoA = gladIds.map((id) => achar(e, id));
   for (const g of ladoA) {
     exigirVivo(g);
+    exigirComEstilo(g);
     if (!arena.honra && g.campeao) throw new Error('O campeão do ludus não entra no Poço.');
     if (arena.honra && g.pocoOnly) {
       throw new Error(`${g.nome} já lutou no Poço e não pode lutar nas arenas de honra.`);
@@ -837,7 +853,10 @@ export function lutarCampanha(e: Estado, gladIds: string[]): PayloadLuta {
   }
   if (new Set(gladIds).size !== gladIds.length) throw new Error('Escolha gladiadores diferentes.');
   const ladoA = gladIds.map((id) => achar(e, id));
-  for (const g of ladoA) exigirVivo(g);
+  for (const g of ladoA) {
+    exigirVivo(g);
+    exigirComEstilo(g);
+  }
   pagar(e, formato, 0);
 
   const rng = proximoRng(e);
