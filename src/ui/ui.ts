@@ -57,6 +57,7 @@ import {
   type PayloadLuta,
 } from '../core/game';
 import { carregar, salvar } from '../core/save';
+import { TOPICOS, TODOS_OS_TOPICOS, topicoDaAba, topicoPorId } from './tutorial';
 import {
   aparenciaDe,
   ATRIBUTOS,
@@ -160,6 +161,8 @@ export function montarUi(raiz: HTMLElement, opcoes: {
   let escolhendo = false;
   let lanistaSel: string | null = null;
   let aviso = '';
+  /** Tópico do tutorial aberto e a página atual. */
+  let tut: { id: string; pag: number } | null = null;
   let equipe: string[] = [];
   const abertos = new Set<string>();
 
@@ -734,7 +737,8 @@ export function montarUi(raiz: HTMLElement, opcoes: {
   function configuracoes(s: Estado): string {
     const p = audio.prefs();
     const lendas = s.gladiadores.filter((g) => g.lenda).length;
-    return `<p class="meta">Libertos nesta partida: ${s.libertados.length} · Lendas no ludus: ${lendas}</p>
+    return `<div class="linha"><button class="btn" data-acao="rever-tutorial">Rever tutorial</button></div>
+      <p class="meta">Libertos nesta partida: ${s.libertados.length} · Lendas no ludus: ${lendas}</p>
       <h4 class="secao">Som</h4>
       <div class="linha">
         <label class="campo">Música
@@ -800,6 +804,38 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     </section>`;
   }
 
+  /** Abre sozinho o próximo tópico do tutorial que ainda não foi visto e já está liberado. */
+  function verificarTutorial(s: Estado): void {
+    if (!s.tutorial) s.tutorial = { vistos: s.turno > 1 ? [...TODOS_OS_TOPICOS] : [] };
+    if (tut) return;
+    const vistos = s.tutorial.vistos;
+    const liberado = (t: (typeof TOPICOS)[number]): boolean =>
+      t.id === 'ludus' || (t.requer ? temMelhoria(s, t.requer) : t.aba === aba);
+    const proximo = TOPICOS.find((t) => !vistos.includes(t.id) && liberado(t));
+    if (proximo) tut = { id: proximo.id, pag: 0 };
+  }
+
+  function modalTutorial(s: Estado): string {
+    if (!tut) return '';
+    const t = topicoPorId(tut.id);
+    if (!t) return '';
+    const paginas = t.paginas(s);
+    const pag = Math.min(tut.pag, paginas.length - 1);
+    const p = paginas[pag];
+    const ultima = pag === paginas.length - 1;
+    return `<div class="tutorial-fundo" role="dialog" aria-modal="true" aria-label="Tutorial: ${esc(t.titulo)}">
+      <div class="tutorial">
+        <small>${esc(t.titulo)} · ${pag + 1}/${paginas.length}</small>
+        <h3>${esc(p.titulo)}</h3>
+        <p>${esc(p.texto)}</p>
+        <div class="tutorial-acoes">
+          <button class="btn" data-acao="tut-fim">${ultima ? '' : 'Pular tutorial'}${ultima ? 'Fechar' : ''}</button>
+          ${ultima ? '' : '<button class="btn primario" data-acao="tut-prox">Próximo</button>'}
+        </div>
+      </div>
+    </div>`;
+  }
+
   function render(): void {
     if (escolhendo) {
       audio.tocarTrilha('menu');
@@ -811,6 +847,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       return;
     }
     const s = e;
+    if (!gameOver(s)) verificarTutorial(s);
     if (gameOver(s)) {
       audio.tocarTrilha('menu');
       raiz.innerHTML = `<section class="menu"><div class="moldura">
@@ -830,6 +867,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       <span>Turno ${s.turno}</span>
       <span>Vitórias ${s.vitoriasTotais}</span>
       <button class="btn ${podeGastarEnergia(s) ? 'pendente' : ''}" data-acao="turno" title="${podeGastarEnergia(s) ? 'Gaste toda a energia antes' : ''}">Próximo turno</button>
+      <button class="btn" data-acao="ajuda" title="Ajuda desta tela" aria-label="Ajuda desta tela">?</button>
       <button class="btn" data-acao="mutar" title="${audio.prefs().ativo ? 'Silenciar' : 'Ligar o som'}" aria-label="${audio.prefs().ativo ? 'Silenciar' : 'Ligar o som'}">${audio.prefs().ativo ? '🔊' : '🔇'}</button>
       <button class="btn" data-acao="menu">Menu</button>
     </header>`;
@@ -849,7 +887,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       : campanha(s);
     const avisoHtml = aviso ? `<p class="aviso">${esc(aviso)}</p>` : '';
     audio.aplicarCena();
-    raiz.innerHTML = `${topo}${abas}${avisoHtml}${conteudo}<section class="rodape">${registro(s)}</section>`;
+    raiz.innerHTML = `${topo}${abas}${avisoHtml}${conteudo}<section class="rodape">${registro(s)}</section>${modalTutorial(s)}`;
   }
 
   /** Executa uma ação de gestão, salva e redesenha. Erros de regra viram aviso. */
@@ -943,6 +981,34 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       case 'novo':
         escolhendo = true;
         lanistaSel = null;
+        render();
+        return;
+      case 'tut-prox':
+        if (tut) tut.pag += 1;
+        render();
+        return;
+      case 'tut-fim': {
+        if (tut && e) {
+          e.tutorial = { vistos: [...new Set([...(e.tutorial?.vistos ?? []), tut.id])] };
+          salvar(e);
+        }
+        tut = null;
+        render();
+        return;
+      }
+      case 'ajuda': {
+        const t = topicoDaAba(aba);
+        const ok = t && (!t.requer || (e && temMelhoria(e, t.requer)));
+        tut = { id: ok && t ? t.id : 'ludus', pag: 0 };
+        render();
+        return;
+      }
+      case 'rever-tutorial':
+        if (e) {
+          e.tutorial = { vistos: [] };
+          salvar(e);
+        }
+        tut = null;
         render();
         return;
       case 'mutar':

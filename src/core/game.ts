@@ -178,6 +178,8 @@ export interface Estado {
   opcoesLanista?: string[];
   /** Lanista escolhido pelo jogador para o passo atual. */
   escolhaLanista?: string | null;
+  /** Tópicos do tutorial já vistos. Ausente em saves antigos. */
+  tutorial?: { vistos: string[] };
   log: string[];
 }
 
