@@ -709,7 +709,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     // Batiatus é o bônus final: some da fila até chegar a vez dele e só aparece, sozinho no centro, quando você pode lutar.
     const final = d.indice === d.sequencia.length - 1;
     const misterio = final && !d.pronto;
-    const lineup = final ? (d.pronto ? [d.lanista] : []) : d.sequencia.slice(0, -1);
+    const lineup = final ? [d.lanista] : d.sequencia.slice(0, -1);
     const n = lineup.length;
     const figuras = lineup
       .map((l, i) => {
@@ -717,8 +717,8 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         const escala = final ? 1.7 : 0.98;
         const largura = ((sp.w * escala) / 1376) * 100;
         const centro = final ? 50 : 8 + (84 / (n - 1)) * i;
-        const estado = final ? 'ativo' : i < d.indice ? 'vencido' : i === d.indice ? 'ativo' : 'futuro';
-        return `<div class="lanista-sel camp-fig ${estado}" style="left:${(centro - largura / 2).toFixed(2)}%;width:${largura.toFixed(2)}%;z-index:${estado === 'ativo' ? 20 : 10 - Math.abs(i - d.indice)}">
+        const estado = misterio ? 'futuro' : final ? 'ativo' : i < d.indice ? 'vencido' : i === d.indice ? 'ativo' : 'futuro';
+        return `<div class="lanista-sel camp-fig ${estado}" style="left:${(centro - largura / 2).toFixed(2)}%;width:${largura.toFixed(2)}%;z-index:${estado === 'ativo' || misterio ? 20 : 10 - Math.abs(i - d.indice)}">
           <img src="${sp.arquivo}" alt="${estado === 'futuro' ? 'Rival ainda desconhecido' : esc(l.nome)}" draggable="false">
           ${final ? '' : `<span class="camp-num">${i + 1}</span>`}</div>`;
       })
@@ -743,11 +743,11 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     return `<section class="camp">${cabeca}${trilha}${palco}
       <article class="camp-duelo ${d.passo.regra.letal ? 'nemesis' : ''}">
         <div class="camp-lados">
-          <div class="camp-lado rival"><div class="camp-lutador">${misterio ? '<span class="camp-misterio">?</span>' : gladiadorImg(rival)}<span>${misterio ? '???' : esc(final ? rival.nome : d.lanista.nome)}</span></div>${final && !misterio ? `<small>campeão de ${esc(d.lanista.nome)}</small>` : ''}${formato > 1 ? '<small>e um companheiro</small>' : ''}</div>
+          <div class="camp-lado rival"><div class="camp-lutador">${misterio ? '<span class="camp-misterio">?</span>' : gladiadorImg(rival)}${misterio ? '' : `<span>${esc(final ? rival.nome : d.lanista.nome)}</span>`}</div>${final && !misterio ? `<small>campeão de ${esc(d.lanista.nome)}</small>` : ''}${formato > 1 ? '<small>e um companheiro</small>' : ''}</div>
           <div class="camp-vs">VS<small>${formato}×${formato}</small></div>
           <div class="camp-lado">${time}</div>
         </div>
-        <p class="camp-regra"><strong>${esc(d.passo.regra.nome)}</strong>${esc(d.passo.regra.descricao)}</p>
+        <p class="camp-regra">${misterio ? '<strong>Regra oculta</strong>Revelada quando você cumprir os requisitos.' : `<strong>${esc(d.passo.regra.nome)}</strong>${esc(d.passo.regra.descricao)}`}</p>
         <p class="camp-morte">☠ Até a morte: nesta luta ninguém se rende.</p>
         <ul class="requisitos">${d.requisitos
           .map((r) => `<li class="${r.ok ? 'ok' : 'falta'}">${r.ok ? '✓' : '•'} ${esc(r.texto)}</li>`)

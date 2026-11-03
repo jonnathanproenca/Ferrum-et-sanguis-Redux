@@ -1,3 +1,9 @@
 node_modules/
 dist/
 *.log
+dbg*
+e2e*
+shot*
+v2-*.png
+testes/
+*.ps1
