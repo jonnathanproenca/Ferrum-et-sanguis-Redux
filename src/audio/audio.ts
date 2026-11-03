@@ -75,9 +75,9 @@ interface Voz {
 
 /** Cada NPC murmura com uma voz diferente: o engenheiro agudo e curioso, o médico grave e rouco, o mercador anasalado. */
 const VOZES: Record<Npc, Voz> = {
-  engenheiro: { base: 250, formantes: [520, 1700], silabas: [2, 4], dur: [0.07, 0.12], salto: 4, queda: 0, aspereza: 0.05, vol: 0.5 },
-  medico: { base: 88, formantes: [380, 850], silabas: [2, 3], dur: [0.18, 0.3], salto: 2, queda: -2.5, aspereza: 0.45, vol: 0.8 },
-  mercador: { base: 150, formantes: [650, 1250], silabas: [3, 5], dur: [0.09, 0.15], salto: 3, queda: 0.5, aspereza: 0.2, vol: 0.6 },
+  engenheiro: { base: 230, formantes: [380, 1250], silabas: [2, 4], dur: [0.07, 0.12], salto: 4, queda: 0, aspereza: 0.05, vol: 0.5 },
+  medico: { base: 82, formantes: [330, 760], silabas: [2, 3], dur: [0.18, 0.3], salto: 2, queda: -2.5, aspereza: 0.45, vol: 0.8 },
+  mercador: { base: 140, formantes: [480, 1000], silabas: [3, 5], dur: [0.09, 0.15], salto: 3, queda: 0.5, aspereza: 0.2, vol: 0.6 },
 };
 
 interface CenaCfg {
@@ -518,28 +518,44 @@ class Motor {
       const dur = v.dur[0] + Math.random() * (v.dur[1] - v.dur[0]);
       semitom += (Math.random() * 2 - 1) * v.salto + v.queda;
       const f = v.base * Math.pow(2, semitom / 12);
+      // Fonte glótica (dente-de-serra suavizada) com vibrato, passando por formantes largos de vogal nasal.
       const o = c.createOscillator();
       o.type = 'sawtooth';
       o.frequency.setValueAtTime(f, at);
-      o.frequency.exponentialRampToValueAtTime(Math.max(40, f * (1 + (Math.random() - 0.5) * 0.15)), at + dur);
+      o.frequency.linearRampToValueAtTime(Math.max(40, f * (1 + (Math.random() - 0.5) * 0.18)), at + dur);
+      const lfo = c.createOscillator();
+      lfo.frequency.value = 5.5;
+      const lfoG = c.createGain();
+      lfoG.gain.value = f * 0.012;
+      lfo.connect(lfoG);
+      lfoG.connect(o.frequency);
+      const suave = c.createBiquadFilter();
+      suave.type = 'lowpass';
+      suave.frequency.value = Math.min(2600, f * 7);
       const g = c.createGain();
       g.gain.setValueAtTime(0.0001, at);
-      g.gain.exponentialRampToValueAtTime(v.vol * 0.35, at + dur * 0.25);
-      g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
-      // Duas faixas de formante dão a cor de vogal; mudam por sílaba.
-      const vogal = 0.8 + Math.random() * 0.5;
-      for (const [fm, q] of [[v.formantes[0] * vogal, 5], [v.formantes[1] * (1.3 - (vogal - 0.8)), 7]] as const) {
+      g.gain.linearRampToValueAtTime(v.vol * 0.9, at + Math.min(0.04, dur * 0.3));
+      g.gain.linearRampToValueAtTime(v.vol * 0.55, at + dur * 0.7);
+      g.gain.linearRampToValueAtTime(0.0001, at + dur);
+      o.connect(suave);
+      const vogal = 0.85 + Math.random() * 0.3;
+      for (const [fm, q, ganho] of [[v.formantes[0] * vogal, 2, 1], [v.formantes[1] * (1.25 - (vogal - 0.85)), 2.5, 0.55], [2400, 3, 0.18]] as const) {
         const bp = c.createBiquadFilter();
         bp.type = 'bandpass';
         bp.frequency.value = fm;
         bp.Q.value = q;
-        o.connect(bp);
-        bp.connect(g);
+        const gf = c.createGain();
+        gf.gain.value = ganho * 2.2;
+        suave.connect(bp);
+        bp.connect(gf);
+        gf.connect(g);
       }
       g.connect(bus);
       o.start(at);
+      lfo.start(at);
       o.stop(at + dur + 0.03);
-      if (v.aspereza > 0) this.ruidoFiltrado(c, at, dur * 0.8, 'bandpass', v.formantes[0] * 1.5, v.vol * v.aspereza * 0.25, bus);
+      lfo.stop(at + dur + 0.03);
+      if (v.aspereza > 0) this.ruidoFiltrado(c, at, dur * 0.8, 'bandpass', v.formantes[0] * 1.3, v.vol * v.aspereza * 0.12, bus);
       at += dur * (0.9 + Math.random() * 0.5);
     }
   }

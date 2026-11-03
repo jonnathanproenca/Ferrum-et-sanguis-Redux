@@ -1,6 +1,60 @@
 [
-  { "id": "coliseu", "nome": "Coliseu", "plateia": "cheia", "honra": true, "arte": "assets/arenas/coliseu.png", "recompensaOuro": [80, 120] },
-  { "id": "capua", "nome": "Anfiteatro de Cápua", "plateia": "meia", "honra": true, "arte": "assets/arenas/capua.png", "recompensaOuro": [40, 60] },
-  { "id": "pompeia", "nome": "Arena de Pompeia", "plateia": "vazia", "honra": true, "arte": "assets/arenas/pompeia.png", "recompensaOuro": [20, 30] },
-  { "id": "poco", "nome": "Poço", "plateia": "meia", "honra": false, "arte": "assets/arenas/poco.png", "efeitos": ["sangramento", "envenenamento", "contusao", "queimadura"], "recompensaOuro": [75, 75] }
+  {
+    "id": "pompeia",
+    "nome": "Arena de Pompeia",
+    "plateia": "vazia",
+    "honra": true,
+    "arte": "assets/arenas/pompeia.png",
+    "recompensaOuro": [
+      20,
+      30
+    ],
+    "batalhasMin": 0,
+    "dificuldade": 0
+  },
+  {
+    "id": "capua",
+    "nome": "Anfiteatro de Cápua",
+    "plateia": "meia",
+    "honra": true,
+    "arte": "assets/arenas/capua.png",
+    "recompensaOuro": [
+      40,
+      60
+    ],
+    "batalhasMin": 8,
+    "dificuldade": 0.2
+  },
+  {
+    "id": "coliseu",
+    "nome": "Coliseu",
+    "plateia": "cheia",
+    "honra": true,
+    "arte": "assets/arenas/coliseu.png",
+    "recompensaOuro": [
+      80,
+      120
+    ],
+    "batalhasMin": 24,
+    "dificuldade": 0.25
+  },
+  {
+    "id": "poco",
+    "nome": "Poço",
+    "plateia": "meia",
+    "honra": false,
+    "arte": "assets/arenas/poco.png",
+    "efeitos": [
+      "sangramento",
+      "envenenamento",
+      "contusao",
+      "queimadura"
+    ],
+    "recompensaOuro": [
+      75,
+      75
+    ],
+    "batalhasMin": 0,
+    "dificuldade": 0.1
+  }
 ]

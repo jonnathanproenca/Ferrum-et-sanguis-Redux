@@ -37,6 +37,39 @@
       #ui[hidden] { display: none; }
 
 
+
+      /* ---------- Campanha ---------- */
+      .camp { max-width: 1100px; margin: 0 auto; }
+      .camp-cabeca { text-align: center; margin: 4px 0 6px; }
+      .camp-cabeca small { color: #c9a24a; letter-spacing: .25em; text-transform: uppercase; font-size: .72rem; }
+      .camp-cabeca h2 { margin: 0; font-weight: normal; font-size: clamp(1.4rem, 4.5vw, 2.4rem); color: #f2e6c8; letter-spacing: .06em; text-shadow: 0 2px 0 #000, 0 0 18px rgba(138,28,28,.8); }
+      .camp-trilha { display: flex; justify-content: center; gap: 0; list-style: none; padding: 0; margin: 0 0 10px; }
+      .camp-trilha li { display: flex; align-items: center; }
+      .camp-trilha li + li::before { content: ''; width: clamp(8px, 3vw, 26px); height: 2px; background: #3a2a20; }
+      .camp-trilha b { width: 26px; height: 26px; display: grid; place-items: center; font-weight: normal; font-size: .75rem; border-radius: 50%; border: 2px solid #3a2a20; color: #7a6650; background: #140d0a; }
+      .camp-trilha .feito b { border-color: #c9a24a; color: #1a0f08; background: #c9a24a; }
+      .camp-trilha .feito + li::before, .camp-trilha .atual + li::before { background: #3a2a20; }
+      .camp-trilha .atual b { border-color: #d6452f; color: #fff; background: #8a1c1c; box-shadow: 0 0 10px #d6452f; animation: camp-pulsa 1.6s ease-in-out infinite; }
+      @keyframes camp-pulsa { 50% { box-shadow: 0 0 18px #ff6a4a; } }
+      .camp-palco .sel-info { top: 3%; }
+      .camp-fig { bottom: 12%; }
+      .camp-fig .camp-nome { position: absolute; left: 50%; bottom: -13%; transform: translateX(-50%); white-space: nowrap; background: rgba(15,9,6,.88); border: 1px solid #c9a24a; padding: 2px 10px; color: #f2e6c8; font-size: clamp(.6rem, 1.6vw, .95rem); text-align: center; }
+      .camp-fig .camp-nome small { display: block; color: #c9a24a; font-size: .8em; }
+      .camp-duelo { margin: 12px 0; padding: 14px; text-align: center; background: linear-gradient(180deg, #2a1812, #170d09); border: 2px solid #c9a24a; box-shadow: 0 0 0 4px #130c09, 0 10px 30px rgba(0,0,0,.6); }
+      .camp-duelo.nemesis { border-color: #d6452f; box-shadow: 0 0 0 4px #130c09, 0 0 26px rgba(214,69,47,.55); }
+      .camp-lados { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+      .camp-lado { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; align-items: end; }
+      .camp-lado small { flex-basis: 100%; color: #b59a72; }
+      .camp-lutador { display: flex; flex-direction: column; align-items: center; width: 110px; color: #f2e6c8; font-size: .85rem; }
+      .camp-lutador .gladiador-img { height: 132px; width: auto; }
+      .camp-vs { font-size: clamp(2rem, 8vw, 3.6rem); color: #d6452f; text-shadow: 0 0 14px rgba(214,69,47,.7), 0 3px 0 #000; letter-spacing: .05em; line-height: 1; }
+      .camp-vs small { display: block; font-size: .3em; color: #c9a24a; text-shadow: none; }
+      .camp-regra { margin: 10px 0 4px; color: #e8d5b0; }
+      .camp-regra strong { display: block; color: #f2d28a; font-size: 1.05rem; }
+      .camp-morte { color: #ff8a72; margin: 4px 0 8px; font-style: italic; }
+      .camp-entrar { width: 100%; font-size: 1.15rem; letter-spacing: .08em; text-transform: uppercase; }
+      .camp-fim { text-align: center; padding: 40px 16px; border: 2px solid #c9a24a; background: #170d09; color: #f2e6c8; }
+
       /* ---------- Escolha do lanista ---------- */
       .selecao-lanistas { max-width: 1100px; margin: 0 auto; }
       .sel-palco {
@@ -64,6 +97,11 @@
       .lanista-sel:focus-visible { outline: 2px dashed #f2d28a; outline-offset: 2px; }
       .sel-acoes { display: flex; gap: 12px; justify-content: space-between; align-items: center; margin-top: 14px; }
       .sel-info-m { display: none; }
+      .sel-regras { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: center; margin-top: 12px; }
+      .sel-regras .meta { flex-basis: 100%; text-align: center; margin: 0; }
+      .sel-regras .campo { display: inline-flex; align-items: center; gap: 6px; }
+      .sel-regras input { width: 4em; }
+      .card.arena.fechada { opacity: .55; filter: grayscale(.7); }
       @media (max-width: 720px) {
         .sel-palco .sel-info { display: none; }
         .sel-palco::after { display: none; }

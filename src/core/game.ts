@@ -10,6 +10,8 @@ import {
 } from './combat';
 import {
   aparenciaDe,
+  ATRIBUTOS,
+  statsDoGladiador,
   atualizarNivel,
   CLASSES,
   CLASSES_IDS,
@@ -74,6 +76,10 @@ export interface Arena {
   arte: string;
   efeitos?: TipoEfeito[];
   recompensaOuro: [number, number];
+  /** Batalhas já disputadas nas arenas para liberar esta (fama do ludus). */
+  batalhasMin: number;
+  /** Acréscimo de dificuldade sobre a arena anterior (0.2 = +20%); no Poço, sobre a base. */
+  dificuldade: number;
 }
 export const ARENAS = arenasJson as unknown as Arena[];
 
@@ -149,6 +155,8 @@ export interface Estado {
   turno: number;
   proximoId: number;
   vitoriasTotais: number;
+  /** Batalhas disputadas nas arenas (vitórias ou derrotas). Ausente em saves antigos. */
+  batalhasTotais?: number;
   /** Índice do próximo passo da campanha (0 até PASSOS.length). */
   campanha: number;
   /** Gladiadores libertos: podem voltar como adversários em recriações de luta. */
@@ -175,9 +183,11 @@ export interface Estado {
 
 /** Limiares de vitórias. A lenda vem antes (prestígio); a liberdade é o fim da carreira. */
 export interface Config {
+  /** Vitórias para um gladiador virar campeão do ludus. */
+  vitoriasCampeao: number;
   vitoriasLenda: number;
 }
-export const CONFIG_PADRAO: Config = { vitoriasLenda: 6 };
+export const CONFIG_PADRAO: Config = { vitoriasCampeao: 3, vitoriasLenda: 6 };
 /** A liberdade vem em 3 vezes o limiar de lenda. */
 export const FATOR_LIBERDADE = 3;
 
@@ -307,6 +317,27 @@ export function lanistaDaCasa(e: Estado): Lanista {
   return l;
 }
 
+/** Multiplicador de força dos rivais: cada arena de honra soma seu percentual por cima da anterior. */
+export function multiplicadorArena(arena: Arena): number {
+  if (!arena.honra) return 1 + arena.dificuldade;
+  let m = 1;
+  for (const a of ARENAS.filter((x) => x.honra)) {
+    m *= 1 + a.dificuldade;
+    if (a.id === arena.id) break;
+  }
+  return m;
+}
+
+export function batalhasDoLudus(e: Estado): number {
+  return e.batalhasTotais ?? e.vitoriasTotais;
+}
+
+/** Arena liberada pela fama: só se luta numa arena melhor depois de muitas batalhas (vitórias ou não). */
+export function arenaLiberada(e: Estado, arena: Arena): { liberada: boolean; faltam: number } {
+  const faltam = Math.max(0, arena.batalhasMin - batalhasDoLudus(e));
+  return { liberada: faltam === 0, faltam };
+}
+
 export function arenaPorId(id: string): Arena {
   const a = ARENAS.find((x) => x.id === id);
   if (!a) throw new Error('Arena inexistente.');
@@ -320,7 +351,7 @@ export function filaLanistas(e: Estado): Lanista[] {
 
 // ---------- Partida ----------
 
-export function novoJogo(semente: number = Date.now() % 2147483646, casaId?: string): Estado {
+export function novoJogo(semente: number = Date.now() % 2147483646, casaId?: string, config?: Partial<Config>): Estado {
   const e: Estado = {
     versao: 4,
     semente: semente || 1,
@@ -340,6 +371,7 @@ export function novoJogo(semente: number = Date.now() % 2147483646, casaId?: str
     melhorias: {},
     log: [],
   };
+  if (config) definirConfig(e, config);
   const rng = proximoRng(e);
   const sorteado = LANISTAS[rng.int(0, LANISTAS.length - 1)].id;
   e.casaId = casaId && LANISTAS.some((l) => l.id === casaId) ? casaId : sorteado;
@@ -348,14 +380,14 @@ export function novoJogo(semente: number = Date.now() % 2147483646, casaId?: str
   if (bOuro) e.ouro += bOuro.valor;
   const nivelCampeao = 4 + (bonusDaCasa(e, 'campeaoNivel')?.valor ?? 0);
 
-  e.gladiadores.push(gerarGladiador(rng, novoId(e), casa.especialidade, nivelCampeao, 'livre', true));
+  e.gladiadores.push(gerarGladiador(rng, novoId(e), casa.especialidade, nivelCampeao, 'livre', false));
   for (const l of filaLanistas(e)) {
     e.campeoesRivais[l.id] = gerarGladiador(rng, `campeao-${l.id}`, l.especialidade, 4, 'livre', true);
   }
   sortearOpcoes(e, rng);
   gerarMercado(e);
   gerarArmeiroMestre(e);
-  registrar(e, `Você comanda ${casa.nome}, casa de ${CLASSES[casa.especialidade].nome}. Seu campeão lidera o ludus.`);
+  registrar(e, `Você comanda ${casa.nome}, casa de ${CLASSES[casa.especialidade].nome}. Seu primeiro gladiador já espera na areia: com ${e.config.vitoriasCampeao} vitórias, um deles será o campeão.`);
   return e;
 }
 
@@ -765,6 +797,8 @@ export function lutarArena(e: Estado, gladIds: string[], arenaId: string): Paylo
   if (gladIds.length < 1 || gladIds.length > 2) throw new Error('Escolha 1 ou 2 gladiadores.');
   if (new Set(gladIds).size !== gladIds.length) throw new Error('Escolha gladiadores diferentes.');
   const ladoA = gladIds.map((id) => achar(e, id));
+  const fama = arenaLiberada(e, arena);
+  if (!fama.liberada) throw new Error(`${arena.nome} só abre depois de ${arena.batalhasMin} batalhas (faltam ${fama.faltam}).`);
   for (const g of ladoA) {
     exigirVivo(g);
     exigirComEstilo(g);
@@ -775,6 +809,7 @@ export function lutarArena(e: Estado, gladIds: string[], arenaId: string): Paylo
   }
   // 2×2 gasta 2 de energia e paga o dobro: a energia e a recompensa crescem com o número de gladiadores.
   pagar(e, gladIds.length, 0);
+  e.batalhasTotais = batalhasDoLudus(e) + 1;
 
   const rng = proximoRng(e);
   const origem: OrigemTipo = arena.honra ? 'livre' : 'escravo';
@@ -785,10 +820,18 @@ export function lutarArena(e: Estado, gladIds: string[], arenaId: string): Paylo
     registrar(e, `${base.nome} retorna à arena numa recriação de luta.`);
   }
 
+  // Dificuldade da arena: os rivais ganham o percentual em cada atributo.
+  const mult = multiplicadorArena(arena);
+  const bonusB: Partial<Stats> = {};
+  if (mult > 1) {
+    const media = statsDoGladiador(ladoB[0]);
+    for (const a of ATRIBUTOS) bonusB[a] = Math.round(media[a] * (mult - 1));
+  }
+
   return disputar(e, {
     ladoA,
     ladoB,
-    bonusB: {},
+    bonusB,
     arena,
     titulo: arena.nome,
     trilha: arena.id,
@@ -954,6 +997,13 @@ export function aplicarMarcos(e: Estado, g: Gladiador): string[] {
     marcos.push(msg);
     return marcos;
   }
+  const jaHaCampeao = e.gladiadores.some((x) => x.campeao && x.vivo);
+  if (!g.campeao && !jaHaCampeao && !g.pocoOnly && g.vitorias >= (e.config.vitoriasCampeao ?? CONFIG_PADRAO.vitoriasCampeao)) {
+    g.campeao = true;
+    const msg = `${g.nome} tornou-se o campeão do ludus após ${g.vitorias} vitórias.`;
+    registrar(e, msg);
+    marcos.push(msg);
+  }
   const jaHaLenda = e.gladiadores.some((x) => x.lenda && x.vivo && x.id !== g.id);
   if (!g.lenda && !jaHaLenda && g.vitorias >= e.config.vitoriasLenda) {
     g.lenda = true;
@@ -995,9 +1045,11 @@ export function dispensarGladiador(e: Estado, id: string): void {
   registrar(e, `${g.nome} foi dispensado.`);
 }
 
-/** Atualiza o limiar de lenda (valor do menu). A liberdade é derivada dele. */
+/** Define os limiares de vitórias. Só vale na criação do ludus: a tela do jogo não oferece mais a edição. */
 export function definirConfig(e: Estado, valores: Partial<Config>): void {
   const lenda = Math.round(valores.vitoriasLenda ?? e.config.vitoriasLenda);
+  const campeao = Math.round(valores.vitoriasCampeao ?? e.config.vitoriasCampeao ?? CONFIG_PADRAO.vitoriasCampeao);
   if (!Number.isFinite(lenda) || lenda < 1 || lenda > 30) throw new Error('Lenda: informe de 1 a 30 vitórias.');
-  e.config = { vitoriasLenda: lenda };
+  if (!Number.isFinite(campeao) || campeao < 1 || campeao > 30) throw new Error('Campeão: informe de 1 a 30 vitórias.');
+  e.config = { vitoriasCampeao: campeao, vitoriasLenda: lenda };
 }

@@ -21,6 +21,10 @@ import {
   filaLanistas,
   lanistaDaCasa,
   limiarLiberdade,
+  arenaLiberada,
+  arenaPorId,
+  multiplicadorArena,
+  batalhasDoLudus,
   lutarArena,
   escolherLanista,
   lutarCampanha,
@@ -54,7 +58,12 @@ import {
 import { criarLutador, simularEquipes } from '../src/core/combat';
 import { Rng } from '../src/core/rng';
 
-const campeaoDe = (e: Estado): Gladiador => e.gladiadores.find((g) => g.campeao) as Gladiador;
+/** O primeiro gladiador começa sem título; os testes que precisam do campeão o promovem aqui. */
+const campeaoDe = (e: Estado): Gladiador => {
+  const g = e.gladiadores[0];
+  g.campeao = true;
+  return g;
+};
 
 describe('partida nova', () => {
   it('começa com um campeão, da especialidade do lanista da casa', () => {
@@ -264,9 +273,9 @@ describe('turno e economia', () => {
     const vivos = e.gladiadores.filter((g) => g.vivo).length;
     const antes = e.ouro;
     const turnoAntes = e.turno;
+    const patrocinio = 20 + 5 * campeaoDe(e).vitorias;
     e.energia = 0;
     avancarTurno(e);
-    const patrocinio = 20 + 5 * campeaoDe(e).vitorias;
     expect(e.turno).toBe(turnoAntes + 1);
     expect(e.energia).toBe(3);
     expect(e.ouro).toBe(antes + patrocinio - (10 + 5 * vivos));
@@ -285,7 +294,7 @@ describe('turno e economia', () => {
   it('lutar em arena de honra registra o resultado', () => {
     const e = novoJogo(51);
     const campeao = campeaoDe(e);
-    const payload = lutarArena(e, [campeao.id], 'capua');
+    const payload = lutarArena(e, [campeao.id], 'pompeia');
     expect(payload.eventos.length).toBeGreaterThan(0);
     expect(campeao.vitorias + campeao.derrotas).toBe(1);
     expect(payload.lutadoresA[0].aparencia.campeao).toBe(true);
@@ -342,7 +351,7 @@ describe('venda, dispensa e marcos', () => {
     expect(() => definirConfig(e, { vitoriasLenda: 0 })).toThrow(/Lenda/);
     expect(() => definirConfig(e, { vitoriasLenda: 31 })).toThrow(/Lenda/);
     definirConfig(e, { vitoriasLenda: 8 });
-    expect(e.config).toEqual({ vitoriasLenda: 8 });
+    expect(e.config).toEqual({ vitoriasCampeao: 3, vitoriasLenda: 8 });
     expect(limiarLiberdade(e.config)).toBe(24);
   });
 
@@ -487,7 +496,7 @@ describe('Poço: valor fixo com bônus pela lotação', () => {
       e.ouro = 1000;
       e.melhorias = { alojamentos: true };
       recrutar(e, e.mercado[0].id);
-      const g = e.gladiadores.find((x) => !x.campeao);
+      const g = e.gladiadores.find((x) => x.semEstilo);
       if (!g) continue;
       escolherEstilo(e, g.id, 'murmilo');
       const antes = e.ouro - 1; // a luta custa 1 de energia/ouro conforme a regra de `pagar`
@@ -599,7 +608,10 @@ describe('bônus dos lanistas', () => {
     const base = novoJogo(5, 'lanista-1');
     const ec = novoJogo(5, 'lanista-7');
     const nn = novoJogo(5, 'lanista-4');
-    for (const x of [base, ec, nn]) x.ouro = 1000;
+    for (const x of [base, ec, nn]) {
+      x.ouro = 1000;
+      campeaoDe(x);
+    }
     base.energia = 0;
     avancarTurno(base);
     ec.energia = 0;
@@ -699,5 +711,53 @@ describe('armeiro mestre: chance por qualidade', () => {
         expect(item.qualidade).toBeLessThanOrEqual(4);
       }
     }
+  });
+});
+
+describe('campeão por vitórias, arenas por fama e dificuldade', () => {
+  it('ninguém começa campeão; vira campeão ao atingir as vitórias das regras', () => {
+    const e = novoJogo(90, 'lanista-1', { vitoriasCampeao: 2, vitoriasLenda: 6 });
+    expect(e.gladiadores.some((g) => g.campeao)).toBe(false);
+    const g = e.gladiadores[0];
+    g.vitorias = 1;
+    aplicarMarcos(e, g);
+    expect(g.campeao).toBe(false);
+    g.vitorias = 2;
+    aplicarMarcos(e, g);
+    expect(g.campeao).toBe(true);
+    // só um campeão por vez
+    const outro = { ...g, id: 'outro', campeao: false, vitorias: 5 };
+    e.gladiadores.push(outro);
+    aplicarMarcos(e, outro);
+    expect(outro.campeao).toBe(false);
+  });
+
+  it('as regras da partida vêm do novo jogo e recusam valores inválidos', () => {
+    expect(novoJogo(91, 'lanista-1', { vitoriasCampeao: 4, vitoriasLenda: 9 }).config).toEqual({ vitoriasCampeao: 4, vitoriasLenda: 9 });
+    expect(() => novoJogo(92, 'lanista-1', { vitoriasCampeao: 0 })).toThrow(/Campeão/);
+  });
+
+  it('Cápua e Coliseu só abrem com batalhas (vitórias ou não); Pompeia é livre', () => {
+    const e = novoJogo(93);
+    const g = e.gladiadores[0];
+    e.energia = 99;
+    expect(() => lutarArena(e, [g.id], 'capua')).toThrow(/batalhas/);
+    expect(arenaLiberada(e, arenaPorId('pompeia')).liberada).toBe(true);
+    const meta = arenaPorId('capua').batalhasMin;
+    for (let i = 0; i < meta && g.vivo; i++) {
+      g.vivo = true;
+      g.efeitos = [];
+      lutarArena(e, [g.id], 'pompeia');
+    }
+    expect(batalhasDoLudus(e)).toBeGreaterThanOrEqual(meta);
+    g.vivo = true;
+    expect(() => lutarArena(e, [g.id], 'capua')).not.toThrow();
+    expect(() => lutarArena(e, [g.id], 'coliseu')).toThrow(/batalhas/);
+  });
+
+  it('a dificuldade se acumula: Pompeia 1, Cápua +20%, Coliseu +25% por cima', () => {
+    expect(multiplicadorArena(arenaPorId('pompeia'))).toBe(1);
+    expect(multiplicadorArena(arenaPorId('capua'))).toBeCloseTo(1.2);
+    expect(multiplicadorArena(arenaPorId('coliseu'))).toBeCloseTo(1.5);
   });
 });

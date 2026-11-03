@@ -42,7 +42,8 @@ import {
   treinar,
   venderGladiador,
   dispensarGladiador,
-  definirConfig,
+  arenaLiberada,
+  multiplicadorArena,
   limiarLiberdade,
   type Arena,
   type Estado,
@@ -630,9 +631,11 @@ export function montarUi(raiz: HTMLElement, opcoes: {
   function arenas(s: Estado): string {
     const sel = equipeValida(s);
     const cards = ARENAS.map((a: Arena) => {
+      const fama = arenaLiberada(s, a);
       const erros = sel
         .map((g) =>
-          !a.honra && g.campeao ? `${g.nome} é o campeão e não entra no Poço.`
+          !fama.liberada ? `Arena fechada: faltam ${fama.faltam} batalhas.`
+          : !a.honra && g.campeao ? `${g.nome} é o campeão e não entra no Poço.`
           : a.honra && g.pocoOnly ? `${g.nome} já lutou no Poço: fora das arenas de honra.`
           : '',
         )
@@ -643,18 +646,20 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       const botoes = [1, 2]
         .map((modo) => {
           const motivo =
-            sel.length === 0 ? `Escale ${modo} gladiador${modo > 1 ? 'es' : ''}.`
+            !fama.liberada ? 'Arena fechada.' : sel.length === 0 ? `Escale ${modo} gladiador${modo > 1 ? 'es' : ''}.`
             : sel.length !== modo ? `Esta opção pede ${modo} gladiador${modo > 1 ? 'es' : ''}; você escalou ${sel.length}.`
             : erros[0] ?? (s.energia < modo ? `Energia insuficiente (precisa de ${modo}).` : '');
           return `<button class="btn ${modo === 1 ? 'primario' : ''}" data-acao="lutar" data-valor="${a.id}" data-modo="${modo}" ${motivo ? 'disabled' : ''}>Lutar ${modo}×${modo}${modo > 1 ? ' · 2 energia, ouro ×2' : ''}</button>`;
         })
         .join('');
-      const status = sel.length === 0 ? 'Escale os gladiadores acima.' : erros[0] ?? '';
-      return `<article class="card arena">
+      const status = !fama.liberada ? `Fechada: só abre com ${a.batalhasMin} batalhas disputadas (faltam ${fama.faltam}).` : sel.length === 0 ? 'Escale os gladiadores acima.' : erros[0] ?? '';
+      const dif = Math.round((multiplicadorArena(a) - 1) * 100);
+      return `<article class="card arena ${fama.liberada ? '' : 'fechada'}">
         <div class="arte"><img class="arte-img" src="${a.arte.replace('.png', '-mini.png')}" width="480" height="270" alt=""></div>
         <h3>${esc(a.nome)}</h3>
         <p class="meta">${a.honra ? `Plateia ${esc(a.plateia)}` : 'Plateia sorteada a cada luta'} · ${a.honra ? 'Arena de honra' : 'Poço: golpes causam efeitos persistentes'}</p>
         <p class="meta">Rendição: quem cai abaixo de 25% se rende.</p>
+        <p class="meta">Rivais ${dif > 0 ? `+${dif}% mais fortes` : 'no nível base'}</p>
         ${efeitos}
         <p class="meta">Recompensa ${a.recompensaOuro[0] === a.recompensaOuro[1] ? `${a.recompensaOuro[0]} ouro + bônus da lotação (10%, 20% ou 30%)` : `${a.recompensaOuro[0]}–${a.recompensaOuro[1]} ouro`}</p>
         ${status ? `<p class="aviso">${esc(status)}</p>` : ''}
@@ -667,67 +672,62 @@ export function montarUi(raiz: HTMLElement, opcoes: {
   function campanha(s: Estado): string {
     const d = proximoDesafio(s);
     if (!d) {
-      return `<article class="card desafio"><h3>Campanha concluída</h3>
-        <p class="meta">Você venceu todos os lanistas da fila.</p></article>`;
+      return `<section class="camp"><div class="camp-fim"><h2>Campanha concluída</h2>
+        <p>Você venceu todos os lanistas da fila. O nome do seu ludus ecoa por Roma.</p></div></section>`;
     }
     const formato = d.passo.formato ?? 1;
     const sel = equipeValida(s);
-    const escolha = d.opcoes
-      .map((l) => {
-        const rivalCampeao = s.campeoesRivais[l.id];
-        const marcado = d.lanista?.id === l.id;
-        return `<button class="card lanista-opcao ${marcado ? 'escolhido' : ''}" data-acao="escolher-lanista" data-id="${l.id}">
-          <div class="thumb">${gladiadorImg(rivalCampeao)}</div>
-          <h3>${esc(l.nome)}</h3>
-          <p class="meta">Escola de ${esc(CLASSES[l.especialidade].nome)}</p>
-          <p class="meta">${marcado ? 'Desafio aceito' : 'Toque para enfrentar'}</p>
-        </button>`;
+    const trilha = `<ol class="camp-trilha">${PASSOS.map((p, i) =>
+      `<li class="${i < d.indice ? 'feito' : i === d.indice ? 'atual' : ''}" title="${esc(p.titulo)}"><b>${i < d.indice ? '✓' : i + 1}</b></li>`).join('')}</ol>`;
+    const n = d.opcoes.length;
+    const figuras = d.opcoes
+      .map((l, i) => {
+        const sp = SPRITES_LANISTA[l.id];
+        const largura = ((sp.w * 1.7) / 1376) * 100;
+        const centro = n === 1 ? 50 : 20 + (60 / (n - 1)) * i;
+        const ativo = d.lanista?.id === l.id;
+        return `<button class="lanista-sel camp-fig ${ativo ? 'ativo' : d.lanista ? 'apagado' : ''}" data-acao="escolher-lanista" data-id="${l.id}" aria-pressed="${ativo}"
+          style="left:${(centro - largura / 2).toFixed(2)}%;width:${largura.toFixed(2)}%;z-index:${ativo ? 20 : 10}">
+          <img src="${sp.arquivo}" alt="${esc(l.nome)}" draggable="false">
+          <span class="camp-nome">${esc(l.nome)}<small>${esc(CLASSES[l.especialidade].nome)}</small></span></button>`;
       })
       .join('');
-    const opcoesHtml = `<section class="escolha-lanista">
-      <h3>Escolha quem enfrentar</h3>
-      <div class="grade">${escolha}</div>
-    </section>`;
-    if (!d.lanista) {
-      return `${opcoesHtml}<p class="aviso">Escolha um lanista para ver o desafio.</p>`;
-    }
+    const palco = `<div class="sel-palco camp-palco" style="background-image:url('${FUNDO_LANISTAS}')">
+      <div class="sel-info"><h2>${d.lanista ? `Desafio aceito: ${esc(d.lanista.nome)}` : 'Escolha quem enfrentar'}</h2>
+      <p>${d.lanista ? 'Toque em outro lanista para mudar de ideia.' : 'Cada vitória aproxima o seu ludus da glória.'}</p></div>
+      ${figuras}</div>`;
+    const cabeca = `<header class="camp-cabeca"><small>Passo ${d.indice + 1} de ${PASSOS.length}</small><h2>${esc(d.passo.titulo)}</h2></header>`;
+    if (!d.lanista) return `<section class="camp">${cabeca}${trilha}${palco}</section>`;
     const rival = s.campeoesRivais[d.lanista.id];
     const pronto = d.pronto && sel.length === formato && s.energia >= formato;
     const status = sel.length !== formato ? `Escale ${formato} gladiador${formato > 1 ? 'es' : ''}.`
       : s.energia < formato ? `Energia insuficiente (precisa de ${formato}).`
       : '';
-    return `${opcoesHtml}${seletorEquipe(s, `Escalação (${formato} contra ${formato})`, formato)}
-      <article class="card desafio ${d.passo.regra.letal ? 'nemesis' : ''}">
-        <div class="linha">
-          <div class="thumb">${gladiadorImg(rival)}</div>
-          <div>
-            <h3>${esc(d.passo.titulo)} <small>${formato}×${formato}</small></h3>
-            <p class="meta">Rival: ${esc(d.lanista.nome)} · ${esc(CLASSES[d.lanista.especialidade].nome)}${formato > 1 ? ' e um companheiro' : ''}</p>
-            <p class="passiva"><strong>${esc(d.passo.regra.nome)}:</strong> ${esc(d.passo.regra.descricao)}</p>
-            <p class="aviso">Até a morte: nesta luta ninguém se rende.</p>
-          </div>
+    const time = sel.length
+      ? sel.map((g) => `<div class="camp-lutador">${gladiadorImg(g)}<span>${esc(g.nome)}</span></div>`).join('')
+      : '<p class="meta">Escale seu time abaixo.</p>';
+    return `<section class="camp">${cabeca}${trilha}${palco}
+      <article class="camp-duelo ${d.passo.regra.letal ? 'nemesis' : ''}">
+        <div class="camp-lados">
+          <div class="camp-lado rival"><div class="camp-lutador">${gladiadorImg(rival)}<span>${esc(d.lanista.nome)}</span></div>${formato > 1 ? '<small>e um companheiro</small>' : ''}</div>
+          <div class="camp-vs">VS<small>${formato}×${formato}</small></div>
+          <div class="camp-lado">${time}</div>
         </div>
+        <p class="camp-regra"><strong>${esc(d.passo.regra.nome)}</strong>${esc(d.passo.regra.descricao)}</p>
+        <p class="camp-morte">☠ Até a morte: nesta luta ninguém se rende.</p>
         <ul class="requisitos">${d.requisitos
           .map((r) => `<li class="${r.ok ? 'ok' : 'falta'}">${r.ok ? '✓' : '•'} ${esc(r.texto)}</li>`)
           .join('')}</ul>
-        <p class="meta">Passo ${d.indice + 1} de ${PASSOS.length}</p>
         ${status ? `<p class="aviso">${esc(status)}</p>` : ''}
-        <button class="btn grande primario" data-acao="campanha" ${pronto ? '' : 'disabled'}>Enfrentar</button>
-      </article>`;
+        <button class="btn grande primario camp-entrar" data-acao="campanha" ${pronto ? '' : 'disabled'}>Entrar na arena</button>
+      </article>
+      ${seletorEquipe(s, `Escalação (${formato} contra ${formato})`, formato)}</section>`;
   }
 
   function configuracoes(s: Estado): string {
     const p = audio.prefs();
     const lendas = s.gladiadores.filter((g) => g.lenda).length;
-    return `<h4 class="secao">Gladiadores</h4>
-      <div class="linha">
-        <label class="campo">Vira lenda com
-          <input type="number" min="1" max="30" value="${s.config.vitoriasLenda}" data-campo="lenda"> vitórias</label>
-        <p class="meta">Liberdade: ${limiarLiberdade(s.config)} vitórias (3× a lenda)</p>
-        <button class="btn primario" data-acao="salvar-config">Salvar</button>
-      </div>
-      <p class="meta">Só uma lenda viva por ludus. Lenda: +1 em todos os atributos, nunca vendida nem dispensada; só deixa o ludus pela liberdade. Liberdade: automática ao chegar ao limite. O campeão não é libertado. Só escravos são vendidos.</p>
-      <p class="meta">Libertos nesta partida: ${s.libertados.length} · Lendas no ludus: ${lendas}</p>
+    return `<p class="meta">Libertos nesta partida: ${s.libertados.length} · Lendas no ludus: ${lendas}</p>
       <h4 class="secao">Som</h4>
       <div class="linha">
         <label class="campo"><span><input type="checkbox" data-audio="ativo" ${p.ativo ? 'checked' : ''}> Som ligado</span></label>
@@ -757,6 +757,14 @@ export function montarUi(raiz: HTMLElement, opcoes: {
   }
 
   /** Tela de escolha do lanista (nome, história, especialidade e bônus) ao começar um novo ludus. */
+  const regras = { campeao: 3, lenda: 6 };
+  function lerRegras(): void {
+    for (const k of ['campeao', 'lenda'] as const) {
+      const v = Number(raiz.querySelector<HTMLInputElement>(`input[data-regra="${k}"]`)?.value);
+      if (Number.isFinite(v) && v >= 1) regras[k] = Math.min(30, Math.round(v));
+    }
+  }
+
   function selecaoLanista(): string {
     const sel = LANISTAS.find((l) => l.id === lanistaSel) ?? null;
     const posicoes = LANISTAS.map((l, i) => {
@@ -781,6 +789,11 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         ${posicoes}
       </div>
       <div class="sel-info sel-info-m">${info}</div>
+      <div class="sel-regras">
+        <label class="campo">Campeão com <input type="number" min="1" max="30" value="${regras.campeao}" data-regra="campeao"> vitórias</label>
+        <label class="campo">Lenda com <input type="number" min="1" max="30" value="${regras.lenda}" data-regra="lenda"> vitórias</label>
+        <p class="meta">Liberdade: ${regras.lenda * 3} vitórias (3× a lenda). Estas regras valem para a partida inteira e não mudam depois.</p>
+      </div>
       <div class="sel-acoes">
         <button class="btn" data-acao="voltar-menu">Voltar</button>
         <button class="btn grande primario" data-acao="confirmar-lanista" ${sel ? '' : 'disabled'}>${sel ? `Assumir o ludus de ${esc(sel.nome)}` : 'Escolha um lanista'}</button>
@@ -923,6 +936,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         render();
         return;
       case 'marcar-lanista':
+        lerRegras();
         lanistaSel = id;
         render();
         return;
@@ -932,8 +946,9 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         return;
       case 'confirmar-lanista':
         if (!lanistaSel) return;
+        lerRegras();
         escolhendo = false;
-        e = novoJogo(undefined, lanistaSel);
+        e = novoJogo(undefined, lanistaSel, { vitoriasCampeao: regras.campeao, vitoriasLenda: regras.lenda });
         menuAberto = false;
         aba = 'ludus';
         equipe = [];
@@ -1003,14 +1018,6 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       case 'dispensar':
         agir((s) => dispensarGladiador(s, id));
         return;
-      case 'salvar-config': {
-        const lenda = raiz.querySelector<HTMLInputElement>('input[data-campo="lenda"]');
-        agir((s) => {
-          definirConfig(s, { vitoriasLenda: Number(lenda?.value) });
-          aviso = 'Configurações salvas.';
-        });
-        return;
-      }
     }
   }
 
