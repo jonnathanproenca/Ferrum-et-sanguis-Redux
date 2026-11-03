@@ -1,6 +1,13 @@
 import { CAPACIDADE_BASE, MAX_GLADIADORES, lanistaDaCasa, regrasDe, type Estado } from '../core/game';
 
 /** Tópicos do tutorial. Os de upgrade só abrem depois que a seção é construída. */
+/** Cada página pode levar o jogador a uma aba: o tour passa pelas telas enquanto explica. */
+export interface Pagina {
+  titulo: string;
+  texto: string;
+  aba?: string;
+}
+
 export interface Topico {
   id: string;
   titulo: string;
@@ -8,7 +15,7 @@ export interface Topico {
   aba?: string;
   /** Melhoria que precisa estar construída para o tópico aparecer. */
   requer?: 'palus' | 'armaria' | 'enfermaria' | 'alojamentos' | 'refeitorio';
-  paginas: (s: Estado) => { titulo: string; texto: string }[];
+  paginas: (s: Estado) => Pagina[];
 }
 
 function progressao(s: Estado): string {
@@ -18,47 +25,39 @@ function progressao(s: Estado): string {
   return `${campeao} O campeão ganha +2 em todos os atributos e rende patrocínio por turno, mas não entra no Poço nem é vendido. Com ${r.lenda} vitórias um gladiador vira lenda (+1 em tudo; só uma lenda viva por vez). ${liberdade}`;
 }
 
-export const TOPICOS: Topico[] = [
-  {
-    id: 'ludus',
-    titulo: 'Seu ludus',
-    paginas: (s) => [
+const comAba = (aba: string, paginas: Pagina[]): Pagina[] => paginas.map((p) => ({ ...p, aba }));
+
+/** Tour inicial: ludus → upgrades → mercado → arenas → volta ao ludus. */
+function tour(s: Estado): Pagina[] {
+  return [
+    ...comAba('ludus', [
       { titulo: `Bem-vindo, lanista de ${lanistaDaCasa(s).nome}`, texto: 'Esta é a tela do ludus: aqui ficam os seus gladiadores. Toque num card para ver atributos, equipamento e ações. Na barra de cima estão ouro, energia, turno e vitórias. As abas levam às outras partes do ludus.' },
       { titulo: 'Energia e turnos', texto: 'Cada rodada dá 3 de energia. Lutar, treinar, tratar feridos e trocar de estilo gastam energia. Quando ela acabar, toque em Próximo turno: o ludus paga a manutenção (10 de ouro + 5 por gladiador vivo) e o campeão rende patrocínio (20 + 5 por vitória dele). O mercado se renova a cada turno.' },
       { titulo: 'Campeão, lenda e liberdade', texto: progressao(s) },
-      { titulo: 'Primeiro passo', texto: 'Seu ludus ainda é pequeno. Passe no Mercado para comprar escravos e escolher o estilo de luta deles; depois mande-os para Pompeia. Ouro e fama abrem o resto.' },
-    ],
-  },
-  {
-    id: 'mercado',
-    titulo: 'Mercado de escravos',
-    aba: 'mercado',
-    paginas: () => [
-      { titulo: 'Só escravos', texto: 'O mercado vende 5 escravos novos a cada turno. Eles chegam sem estilo e sem equipamento. Cada um tem uma terra de origem, uma tendência de atributo e uma condição física que muda o preço: jovem é mais caro, cicatrizado mais barato.' },
+    ]),
+    ...comAba('upgrades', [
+      { titulo: 'Upgrades: construa seu ludus', texto: 'Cada upgrade constrói uma seção nova e libera uma mecânica: palus (treino), armaria (equipamentos), enfermaria (tratar feridos), alojamentos (mais gladiadores) e refeitório (manutenção menor). Compre com ouro; quando a obra termina, o tutorial da seção aparece.' },
+      { titulo: 'Por onde começar', texto: 'Palus e armaria deixam seus gladiadores mais fortes, e os alojamentos abrem espaço para mais lutadores. Compre o que a sua estratégia pede primeiro.' },
+    ]),
+    ...comAba('mercado', [
+      { titulo: 'Mercado: só escravos', texto: 'O mercado vende 5 escravos novos a cada turno. Eles chegam sem estilo e sem equipamento. Cada um tem uma terra de origem, uma tendência de atributo e uma condição física que muda o preço: jovem é mais caro, cicatrizado mais barato.' },
       { titulo: 'Escolha o estilo', texto: 'Depois de comprar, escolha o estilo dele: Murmilo, Retiário, Trácio ou Samnita. É grátis, não gasta energia e já entrega o kit básico do estilo. Escravo sem estilo não luta, só treina. Trocar de estilo mais tarde custa ouro e energia.' },
       { titulo: 'Espaço no ludus', texto: `O ludus comporta ${CAPACIDADE_BASE} gladiadores. Com os alojamentos, o limite sobe para ${MAX_GLADIADORES}. Escravos que não servem podem ser vendidos pela metade do preço.` },
-    ],
-  },
-  {
-    id: 'arenas',
-    titulo: 'Arenas',
-    aba: 'arenas',
-    paginas: () => [
-      { titulo: 'Escalar e lutar', texto: 'Toque nos gladiadores para escalar 1 ou 2 e escolha a arena. Cada gladiador gasta 1 de energia; no 2×2 a recompensa em ouro dobra. Quem cai abaixo de 25% de vida se rende, então a luta termina antes da morte.' },
+    ]),
+    ...comAba('arenas', [
+      { titulo: 'Arenas: escalar e lutar', texto: 'Toque nos gladiadores para escalar 1 ou 2 e escolha a arena. Cada gladiador gasta 1 de energia; no 2×2 a recompensa em ouro dobra. Quem cai abaixo de 25% de vida se rende, então a luta termina antes da morte.' },
       { titulo: 'Fama e dificuldade', texto: 'Você começa em Pompeia. Cápua abre com 8 batalhas disputadas e o Coliseu com 24, vencendo ou não. Quanto melhor a arena, mais forte o rival e maior a recompensa.' },
       { titulo: 'O Poço', texto: 'No Poço os golpes deixam efeitos persistentes (sangramento, veneno, contusão, queimadura), que enfraquecem o gladiador até serem tratados. Quem luta no Poço não volta às arenas de honra, e o campeão não entra.' },
       { titulo: 'Durante a luta', texto: 'Pular luta mostra o resultado na hora, com 10% a menos de ouro. Desistir conta como derrota, sem recompensa, e a energia gasta não volta.' },
-    ],
-  },
-  {
-    id: 'upgrades',
-    titulo: 'Upgrades do ludus',
-    aba: 'upgrades',
-    paginas: () => [
-      { titulo: 'Construa seu ludus', texto: 'Cada upgrade constrói uma seção nova e libera uma mecânica: palus (treino), armaria (equipamentos), enfermaria (tratar feridos), alojamentos (mais gladiadores) e refeitório (manutenção menor). Compre com ouro; quando a obra termina, o tutorial da seção aparece.' },
-      { titulo: 'Por onde começar', texto: 'Palus e armaria deixam seus gladiadores mais fortes, e os alojamentos abrem espaço para mais lutadores. Compre o que a sua estratégia pede primeiro.' },
-    ],
-  },
+    ]),
+    ...comAba('ludus', [
+      { titulo: 'Primeiro passo', texto: 'De volta ao ludus. Vá ao Mercado, compre escravos, escolha o estilo deles e mande-os para Pompeia. Ouro e fama abrem o resto. Boa sorte, lanista!' },
+    ]),
+  ];
+}
+
+export const TOPICOS: Topico[] = [
+  { id: 'tour', titulo: 'Tutorial', paginas: tour },
   {
     id: 'campanha',
     titulo: 'Campanha',
@@ -79,7 +78,6 @@ export const TOPICOS: Topico[] = [
   {
     id: 'armeiro',
     titulo: 'Armaria e armeiro',
-    aba: 'armeiro',
     requer: 'armaria',
     paginas: () => [
       { titulo: 'Peças especiais', texto: 'O armeiro mestre oferece 5 peças por rodada, todas melhores que as básicas. As chances de qualidade: Superior 60%, Rara 25%, Épica 11% e Lendária 4%. Cada rodada tem no máximo 3 verdes, 2 azuis, 2 roxas e 1 laranja.' },
@@ -89,7 +87,6 @@ export const TOPICOS: Topico[] = [
   {
     id: 'enfermaria',
     titulo: 'Enfermaria',
-    aba: 'enfermaria',
     requer: 'enfermaria',
     paginas: () => [
       { titulo: 'Tratar os feridos', texto: 'O médico trata os efeitos persistentes que o Poço deixa. Tratar custa 1 de energia e 30 de ouro por ponto de severidade, e remove todos os efeitos do gladiador. Sem tratamento, os efeitos continuam reduzindo os atributos.' },
@@ -113,8 +110,4 @@ export const TODOS_OS_TOPICOS = TOPICOS.map((t) => t.id);
 
 export function topicoPorId(id: string): Topico | undefined {
   return TOPICOS.find((t) => t.id === id);
-}
-
-export function topicoDaAba(aba: string): Topico | undefined {
-  return TOPICOS.find((t) => t.aba === aba);
 }

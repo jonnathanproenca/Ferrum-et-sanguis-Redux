@@ -59,7 +59,7 @@ import {
   type PayloadLuta,
 } from '../core/game';
 import { carregar, salvar } from '../core/save';
-import { TOPICOS, TODOS_OS_TOPICOS, topicoDaAba, topicoPorId } from './tutorial';
+import { TOPICOS, TODOS_OS_TOPICOS, topicoPorId } from './tutorial';
 import {
   aparenciaDe,
   ATRIBUTOS,
@@ -175,6 +175,10 @@ export function montarUi(raiz: HTMLElement, opcoes: {
   let aviso = '';
   /** Tópico do tutorial aberto e a página atual. */
   let tut: { id: string; pag: number } | null = null;
+  /** O tutorial vive fora da raiz, direto no body, para ficar acima de tudo (cenas, sprites, cards). */
+  const tutRaiz = document.createElement('div');
+  tutRaiz.className = 'tutorial-raiz';
+  document.body.appendChild(tutRaiz);
   let toquesCheat = 0;
   let cheatRecemLiberado = false;
   let equipe: string[] = [];
@@ -836,10 +840,16 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     if (!s.tutorial) s.tutorial = { vistos: s.turno > 1 ? [...TODOS_OS_TOPICOS] : [] };
     if (tut) return;
     const vistos = s.tutorial.vistos;
+    // Saves que já tinham visto o início do tutorial antigo não repetem o tour.
+    const visto = (id: string): boolean => vistos.includes(id) || (id === 'tour' && vistos.includes('ludus'));
     const liberado = (t: (typeof TOPICOS)[number]): boolean =>
-      t.id === 'ludus' || (t.requer ? temMelhoria(s, t.requer) : t.aba === aba);
-    const proximo = TOPICOS.find((t) => !vistos.includes(t.id) && liberado(t));
-    if (proximo) tut = { id: proximo.id, pag: 0 };
+      t.id === 'tour' || (t.requer ? temMelhoria(s, t.requer) : t.aba === aba);
+    const proximo = TOPICOS.find((t) => !visto(t.id) && liberado(t));
+    if (proximo) {
+      tut = { id: proximo.id, pag: 0 };
+      const primeira = proximo.paginas(s)[0]?.aba;
+      if (primeira) aba = primeira as Aba;
+    }
   }
 
   function modalTutorial(s: Estado): string {
@@ -864,6 +874,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
   }
 
   function render(): void {
+    tutRaiz.innerHTML = '';
     if (escolhendo) {
       audio.tocarTrilha('menu');
       raiz.innerHTML = selecaoLanista();
@@ -896,7 +907,6 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       <span>Turno ${s.turno}</span>
       <span>Vitórias ${s.vitoriasTotais}</span>
       <button class="btn ${podeGastarEnergia(s) ? 'pendente' : ''}" data-acao="turno" title="${podeGastarEnergia(s) ? 'Gaste toda a energia antes' : ''}">Próximo turno</button>
-      <button class="btn" data-acao="ajuda" title="Ajuda desta tela" aria-label="Ajuda desta tela">?</button>
       <button class="btn" data-acao="mutar" title="${audio.prefs().ativo ? 'Silenciar' : 'Ligar o som'}" aria-label="${audio.prefs().ativo ? 'Silenciar' : 'Ligar o som'}">${audio.prefs().ativo ? '🔊' : '🔇'}</button>
       <button class="btn" data-acao="menu">Menu</button>
     </header>`;
@@ -917,7 +927,8 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       : campanha(s);
     const avisoHtml = aviso ? `<p class="aviso">${esc(aviso)}</p>` : '';
     audio.aplicarCena();
-    raiz.innerHTML = `${topo}${abas}${avisoHtml}${conteudo}<section class="rodape">${registro(s)}</section>${modalTutorial(s)}`;
+    raiz.innerHTML = `${topo}${abas}${avisoHtml}${conteudo}<section class="rodape">${registro(s)}</section>`;
+    tutRaiz.innerHTML = modalTutorial(s);
   }
 
   /** Executa uma ação de gestão, salva e redesenha. Erros de regra viram aviso. */
@@ -1024,23 +1035,22 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         render();
         return;
       }
-      case 'tut-prox':
-        if (tut) tut.pag += 1;
+      case 'tut-prox': {
+        if (tut && e) {
+          tut.pag += 1;
+          const pg = topicoPorId(tut.id)?.paginas(e)[tut.pag];
+          if (pg?.aba) aba = pg.aba as Aba;
+        }
         render();
         return;
+      }
       case 'tut-fim': {
         if (tut && e) {
+          if (tut.id === 'tour') aba = 'ludus';
           e.tutorial = { vistos: [...new Set([...(e.tutorial?.vistos ?? []), tut.id])] };
           salvar(e);
         }
         tut = null;
-        render();
-        return;
-      }
-      case 'ajuda': {
-        const t = topicoDaAba(aba);
-        const ok = t && (!t.requer || (e && temMelhoria(e, t.requer)));
-        tut = { id: ok && t ? t.id : 'ludus', pag: 0 };
         render();
         return;
       }
@@ -1153,7 +1163,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     }
   }
 
-  raiz.addEventListener('click', (ev) => {
+  const aoClicar = (ev: MouseEvent): void => {
     const alvo = (ev.target as HTMLElement).closest<HTMLElement>('[data-acao]');
     if (!alvo || alvo.hasAttribute('disabled')) return;
     audio.desbloquear();
@@ -1187,7 +1197,10 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     if (alvo.dataset.acao === 'lutar') return lutarNaArena(alvo.dataset.valor ?? '', Number(alvo.dataset.modo ?? 1));
     if (alvo.dataset.acao === 'campanha') return lutarNaCampanha();
     executar(alvo.dataset.acao ?? '', alvo.dataset.id ?? '', alvo.dataset.valor ?? '', campo);
-  });
+  };
+
+  raiz.addEventListener('click', aoClicar);
+  tutRaiz.addEventListener('click', aoClicar);
 
   raiz.addEventListener('change', (ev) => {
     const alvo = ev.target as HTMLInputElement | HTMLSelectElement;
