@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ferrum et Sanguis</title>
+    <style>
+      :root {
+        --bg: #120c0a;
+        --painel: #1d1411;
+        --borda: #4a2a1e;
+        --ocre: #c2895a;
+        --ouro: #f2d28a;
+        --sangue: #8a1c1c;
+        --areia: #e8d5b0;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background:
+          radial-gradient(ellipse at 50% 0%, #3a1a12 0%, transparent 60%),
+          repeating-linear-gradient(90deg, rgba(255,255,255,0.012) 0 2px, transparent 2px 6px),
+          var(--bg);
+        color: var(--areia);
+        font-family: Georgia, 'Times New Roman', serif;
+      }
+      #game {
+        visibility: hidden;
+        position: fixed;
+        inset: 0;
+        z-index: 5;
+        background: var(--bg);
+      }
+      #game.ativo { visibility: visible; }
+      #ui { max-width: 1000px; margin: 0 auto; padding: 16px; }
+      #ui[hidden] { display: none; }
+
+
+      /* ---------- Escolha do lanista ---------- */
+      .selecao-lanistas { max-width: 1100px; margin: 0 auto; }
+      .sel-palco {
+        position: relative; width: 100%; aspect-ratio: 1376 / 768; overflow: hidden;
+        background-size: 100% 100%; image-rendering: pixelated;
+        border: 3px solid var(--ouro); border-radius: 4px; box-shadow: 0 0 0 5px #130c09, 0 20px 50px rgba(0,0,0,0.6);
+      }
+      .sel-palco::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(180deg, rgba(10,6,4,0.78) 0%, rgba(10,6,4,0.45) 22%, transparent 36%); }
+      .sel-info { position: absolute; z-index: 30; left: 50%; top: 2.2%; transform: translateX(-50%); width: 62%; text-align: center; text-shadow: 0 2px 4px #000, 0 0 8px #000; }
+      .sel-info h2 { margin: 0; font-size: clamp(1.1rem, 3.2vw, 2.1rem); font-weight: normal; color: #f2e6c8; letter-spacing: .03em; }
+      .sel-info p { margin: 2px 0 0; font-size: clamp(.65rem, 1.5vw, 1rem); line-height: 1.3; color: #e8d5b0; }
+      .sel-info .sel-titulo { color: #f2d28a; font-style: italic; }
+      .sel-info .sel-esp { color: #c9a24a; }
+      .sel-info .sel-bonus { color: #ffe9a8; }
+      .lanista-sel {
+        position: absolute; bottom: 13%; padding: 0; background: none; border: 0; cursor: pointer;
+        transition: transform .15s, filter .2s; filter: drop-shadow(0 6px 4px rgba(0,0,0,0.55));
+      }
+      .lanista-sel img { display: block; width: 100%; height: auto; image-rendering: pixelated; pointer-events: none; }
+      .lanista-sel.apagado { filter: grayscale(1) brightness(.62) drop-shadow(0 6px 4px rgba(0,0,0,0.55)); }
+      .lanista-sel:hover { transform: translateY(-3%); filter: none; }
+      .lanista-sel.apagado:hover { filter: grayscale(.4) brightness(.85) drop-shadow(0 6px 4px rgba(0,0,0,0.55)); }
+      .lanista-sel.ativo { transform: translateY(-4%) scale(1.04); filter: drop-shadow(0 0 6px #f2c230) drop-shadow(0 0 14px rgba(242,194,48,0.8)); }
+      .lanista-sel:focus-visible { outline: 2px dashed #f2d28a; outline-offset: 2px; }
+      .sel-acoes { display: flex; gap: 12px; justify-content: space-between; align-items: center; margin-top: 14px; }
+      .sel-info-m { display: none; }
+      @media (max-width: 720px) {
+        .sel-palco .sel-info { display: none; }
+        .sel-palco::after { display: none; }
+        .sel-info-m { display: block; margin-top: 10px; text-align: center; }
+        .sel-info-m h2 { margin: 0; font-size: 1.3rem; font-weight: normal; color: #f2e6c8; }
+        .sel-info-m p { margin: 3px 0; font-size: .85rem; color: #e8d5b0; }
+        .sel-info-m .sel-titulo { color: #f2d28a; font-style: italic; }
+        .sel-info-m .sel-esp { color: #c9a24a; }
+        .sel-info-m .sel-bonus { color: #ffe9a8; }
+        .sel-acoes { flex-direction: column-reverse; }
+        .sel-acoes .btn { width: 100%; }
+      }
+
+      /* ---------- Menu ---------- */
+      .menu { display: flex; justify-content: center; padding: 24px 0; }
+      .moldura {
+        position: relative;
+        width: 100%;
+        max-width: 520px;
+        padding: 28px 24px 24px;
+        text-align: center;
+        background: linear-gradient(180deg, #241812 0%, #130c09 100%);
+        border: 3px solid var(--ouro);
+        border-radius: 4px;
+        box-shadow: 0 0 0 6px #130c09, 0 0 0 8px #8a5a1e, 0 30px 60px rgba(0,0,0,0.6);
+      }
+      .moldura::before, .moldura::after {
+        content: '';
+        position: absolute;
+        left: 10px; right: 10px;
+        height: 6px;
+        background: repeating-linear-gradient(90deg, var(--sangue) 0 10px, transparent 10px 16px);
+        opacity: 0.8;
+      }
+      .moldura::before { top: 10px; }
+      .moldura::after { bottom: 10px; }
+      .emblema { width: 120px; height: 120px; margin: 0 auto 4px; display: block; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.7)); }
+      h1 {
+        margin: 6px 0 4px;
+        font-size: 2.2rem;
+        font-weight: normal;
+        letter-spacing: 6px;
+        text-transform: uppercase;
+        background: linear-gradient(180deg, #ffe6a8 0%, #c2892f 55%, #7a3a12 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        filter: drop-shadow(0 2px 0 #000);
+      }
+      .sub { color: var(--ocre); margin: 0 0 18px; font-style: italic; }
+      .bloco { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; align-items: center; }
+      .bloco label { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 340px; font-size: 0.9rem; color: var(--ocre); }
+      .bloco select { width: 100%; }
+
+      /* ---------- Jogo ---------- */
+      .topo {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 18px;
+        align-items: center;
+        padding: 10px 14px;
+        background: linear-gradient(180deg, #2a1a14, var(--painel));
+        border-bottom: 2px solid var(--sangue);
+        border-radius: 6px;
+      }
+      .topo strong { color: var(--ouro); font-weight: normal; letter-spacing: 1px; }
+      .abas { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+      .abas .ativa { background: var(--sangue); border-color: var(--ouro); }
+      .card {
+        background: linear-gradient(180deg, #211612, var(--painel));
+        border: 1px solid var(--borda);
+        border-radius: 8px;
+        padding: 12px;
+      }
+      .card h3 { margin: 0 0 6px; font-size: 1.05rem; font-weight: normal; }
+      .card h3 small { color: var(--ocre); font-size: 0.8rem; }
+      .card.morto { opacity: 0.45; }
+      .card.desafio { border-color: var(--ocre); margin-bottom: 12px; }
+      .card.desafio.nemesis { border-color: var(--sangue); box-shadow: 0 0 14px rgba(138,28,28,0.4); }
+      .card.arena { padding: 0 0 12px; overflow: hidden; }
+      .card.arena h3, .card.arena .meta, .card.arena .aviso, .card.arena .btn { margin-left: 12px; margin-right: 12px; }
+      .card.arena .btn { margin-bottom: 0; }
+      .arte { height: 120px; overflow: hidden; border-bottom: 1px solid var(--borda); margin-bottom: 10px; }
+      .arte img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .passiva { font-size: 0.85rem; color: var(--areia); margin: 4px 0; opacity: 0.9; }
+      .stats { font-family: 'Courier New', monospace; color: var(--ocre); margin: 4px 0; }
+      .meta { font-size: 0.85rem; opacity: 0.85; margin: 4px 0; }
+      .efeitos { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+      .efeito {
+        font-size: 0.75rem;
+        padding: 2px 6px;
+        border: 1px solid #a33;
+        border-radius: 10px;
+        background: #3a1010;
+        color: #ffb3a0;
+      }
+      .requisitos { list-style: none; padding: 0; margin: 4px 0 10px; font-size: 0.9rem; }
+      .requisitos .ok { color: #9be05a; }
+      .requisitos .falta { color: #d88a6a; }
+      .grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+      .botoes { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+      .linha { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0; }
+      .rodape { margin-top: 16px; }
+      .btn {
+        background: linear-gradient(180deg, #33201a, #1f130f);
+        color: var(--areia);
+        border: 1px solid var(--ocre);
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-family: inherit;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+      .btn:hover:not(:disabled) { border-color: var(--ouro); color: var(--ouro); }
+      .btn.primario { background: linear-gradient(180deg, #a12626, var(--sangue)); border-color: #c24a3a; }
+      .btn.grande { padding: 12px 20px; font-size: 1rem; letter-spacing: 1px; }
+      .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+      select {
+        background: var(--bg);
+        color: var(--areia);
+        border: 1px solid var(--ocre);
+        border-radius: 4px;
+        padding: 6px;
+        max-width: 100%;
+        font-family: inherit;
+      }
+      .aviso { color: var(--ocre); font-weight: bold; }
+      .registro { margin-top: 16px; font-size: 0.85rem; }
+      .registro li { margin: 3px 0; }
+      /* ---------- Gladiadores ---------- */
+      .escalacao { background: #1c1411; border: 1px solid #4a3020; border-radius: 10px; padding: 10px 12px; margin: 10px 0 14px; }
+      .escalacao > header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+      .escalacao > header .btn { margin-left: auto; }
+      .escolhidos { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; min-height: 26px; align-items: center; }
+      .escolhido { background: #2a1c15; border: 1px solid #c9a24a; border-radius: 999px; padding: 2px 10px; font-size: 13px; }
+      .escolhido b { color: #c9a24a; margin-right: 4px; }
+      .faixa { display: flex; gap: 8px; overflow-x: auto; padding: 6px 2px 10px; scroll-snap-type: x proximity; }
+      .escala { position: relative; flex: 0 0 104px; background: #14100d; border: 2px solid #3a2a20; border-radius: 10px; padding: 6px 6px 8px; cursor: pointer; color: inherit; text-align: center; scroll-snap-align: start; font: inherit; }
+      .escala .thumb { float: none; width: 84px; margin: 0 auto 4px; }
+      .escala strong { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .escala small { display: block; color: #a8957f; font-size: 11px; line-height: 1.2; }
+      .escala:hover:not(:disabled) { border-color: #7a5a3a; }
+      .escala.marcado { border-color: #c9a24a; box-shadow: 0 0 0 1px #c9a24a inset, 0 0 12px rgba(201,162,74,0.35); }
+      .escala:disabled { opacity: 0.4; cursor: not-allowed; }
+      .escala .num { position: absolute; top: -8px; left: -8px; width: 24px; height: 24px; border-radius: 50%; background: #c9a24a; color: #120c0a; font-weight: bold; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+      /* ----- Ludus: cena no alto do morro ----- */
+      .ludus-wrap { overflow-x: auto; margin: 6px 0 14px; border: 1px solid var(--borda); border-radius: 10px; }
+      .ludus-cena { position: relative; min-width: 760px; aspect-ratio: 1024 / 572; background: #2a1a18; overflow: hidden; border-radius: 10px; user-select: none; }
+      .ludus-cena > * { position: absolute; }
+      .ludus-base, .ludus-camada { display: block; image-rendering: pixelated; pointer-events: none; }
+      .ludus-base { inset: 0; width: 100%; height: 100%; }
+      .ludus-sprite { image-rendering: pixelated; pointer-events: none; height: auto; }
+      .ludus-sprite.espelhado { transform: scaleX(-1); }
+      .ludus-sprite.treina { animation: ludus-treina 3.4s ease-in-out infinite alternate; }
+      @keyframes ludus-treina { from { translate: -5px 0; } 50% { translate: 0 -2px; } to { translate: 5px 0; } }
+      .doctore { position: absolute; pointer-events: none; left: 0; animation: doctore-anda 16s linear infinite alternate; }
+      .doctore-corpo { position: relative; animation: doctore-vira 32s steps(1) infinite; }
+      .doctore-corpo img { display: block; width: 100%; height: auto; image-rendering: pixelated; animation: doctore-passo 0.5s ease-in-out infinite alternate; }
+      @keyframes doctore-anda { from { left: 24%; } to { left: 58%; } }
+      @keyframes doctore-vira { 0%, 49.99% { transform: scaleX(1); } 50%, 100% { transform: scaleX(-1); } }
+      @keyframes doctore-passo { from { translate: 0 0; } to { translate: 0 -2px; } }
+      .doctore .chicote { position: absolute; left: 80%; top: 24%; width: 210%; height: auto; opacity: 0; transform-origin: 0 70%; }
+      .doctore.estala .chicote { animation: chicote-estala 0.5s ease-out; }
+      @keyframes chicote-estala { 0% { opacity: 0; transform: scale(0.3) rotate(25deg); } 25% { opacity: 1; transform: scale(1) rotate(0); } 70% { opacity: 1; } 100% { opacity: 0; transform: scale(1.05) rotate(-4deg); } }
+      /* ----- Ludus: obras (tábuas, parede, ícones) ----- */
+      .upgrade.feito { opacity: 0.75; }
+      .construida-selo { display: inline-block; padding: 4px 12px; border-radius: 999px; border: 1px solid #8fbf7a; color: #8fbf7a; font-size: 13px; }
+      .tabuas { z-index: 3; pointer-events: none; }
+      .tabua { position: absolute; left: -8%; width: 116%; height: 24%; border: 2px solid #26140a; border-radius: 2px; transform: rotate(var(--r, 0deg));
+        background: repeating-linear-gradient(90deg, #7b5232 0 7px, #6a4426 7px 8px, #8a5d3b 8px 17px, #5f3d22 17px 18px);
+        box-shadow: 0 3px 4px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.14); }
+      .tabua::before, .tabua::after { content: ''; position: absolute; top: 38%; width: 4px; height: 4px; border-radius: 50%; background: #c8c8c8; box-shadow: 0 1px 0 #333; }
+      .tabua::before { left: 6%; } .tabua::after { right: 6%; }
+      .arranca .tabua { animation: tabua-arranca 1.5s ease-in both; animation-delay: calc(var(--d, 0s) - var(--decorrido, 0s)); }
+      .compra .arranca .tabua { animation-delay: calc(var(--d, 0s) - var(--decorrido, 0s)); }
+      @keyframes tabua-arranca {
+        0% { transform: rotate(var(--r)); opacity: 1; }
+        30% { transform: rotate(var(--r)); opacity: 1; }
+        100% { transform: translate(var(--vx), 320%) rotate(var(--rf)); opacity: 0; }
+      }
+      .fade-compra { animation: ludus-aparece 1.3s ease-out both; animation-delay: calc(var(--d, 0s) - var(--decorrido, 0s)); }
+      @keyframes ludus-aparece { from { opacity: 0; filter: brightness(2.2); } to { opacity: 1; filter: none; } }
+      .poeira { z-index: 3; pointer-events: none; }
+      .poeira i { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(220, 200, 165, 0.9), rgba(220, 200, 165, 0) 70%); animation: poeira-sobe 1.8s ease-out both; animation-delay: calc(var(--p, 0s) - var(--decorrido, 0s)); }
+      .poeira i:nth-child(1) { left: 5%; top: 30%; width: 45%; height: 60%; --p: 0s; }
+      .poeira i:nth-child(2) { left: 35%; top: 15%; width: 50%; height: 70%; --p: 0.12s; }
+      .poeira i:nth-child(3) { left: 55%; top: 35%; width: 45%; height: 55%; --p: 0.25s; }
+      @keyframes poeira-sobe { 0% { opacity: 0; transform: scale(0.5); } 18% { opacity: 0.95; } 100% { opacity: 0; transform: scale(1.7) translateY(-18%); } }
+      .icone-ludus { z-index: 3; width: 36px; height: 36px; margin: -18px 0 0 -18px; padding: 6px; border-radius: 50%; cursor: pointer; color: #f2d28a; background: rgba(20, 12, 9, 0.88); border: 2px solid #f2d28a; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
+      .icone-ludus svg { display: block; width: 100%; height: 100%; }
+      .icone-ludus:hover, .icone-ludus.aberta { background: #3a2a14; border-color: #fff0a0; }
+      .icone-ludus.pop { animation: icone-pop 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) both; animation-delay: calc(1.9s - var(--decorrido, 0s)); }
+      @keyframes icone-pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+      .icone-aviso { position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #b8281c; color: #fff; font-size: 11px; font-weight: bold; line-height: 18px; text-align: center; }
+      .rotulo-ludus { left: 0; right: 0; top: 2.5%; text-align: center; color: #f2d28a; font-size: 14px; letter-spacing: 1px; text-shadow: 0 1px 3px #000, 0 0 8px #000; pointer-events: none; }
+      .portao { background: none; border: 0; padding: 0; cursor: pointer; color: #f2d28a; z-index: 2; }
+      .portao:hover { outline: 2px dashed rgba(242, 210, 138, 0.85); outline-offset: -3px; }
+      .portao-rotulo { position: absolute; left: 0; right: 0; bottom: 3%; text-align: center; font-size: 12px; text-shadow: 0 1px 2px #000, 0 0 6px #000; }
+      .portao-menu { left: 2%; top: 4%; z-index: 4; background: rgba(20,12,9,0.94); border: 1px solid var(--ocre); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; width: 220px; }
+      .portao-menu .meta { margin: 0 0 4px; }
+      .melhoria { background: none; border: 2px dashed transparent; border-radius: 6px; padding: 0; cursor: pointer; color: #f2d28a; font: inherit; font-size: 11px; z-index: 2; }
+      .melhoria.a-construir { border-color: rgba(242, 210, 138, 0.6); background: rgba(242, 210, 138, 0.05); }
+      .melhoria.a-construir:hover, .melhoria.aberta { background: rgba(242, 210, 138, 0.14); border-color: #f2d28a; }
+      .melhoria.construida:hover, .melhoria.construida.aberta { border-color: rgba(242, 210, 138, 0.8); border-style: solid; }
+      .melhoria-rotulo { position: absolute; left: 50%; bottom: calc(100% + 3px); transform: translateX(-50%); white-space: nowrap; padding: 2px 7px; border-radius: 10px; background: rgba(20, 12, 9, 0.9); border: 1px solid rgba(242, 210, 138, 0.6); text-shadow: none; pointer-events: none; }
+      .melhoria.construida .melhoria-rotulo { display: none; }
+      .melhoria.construida:hover .melhoria-rotulo, .melhoria.construida.aberta .melhoria-rotulo { display: block; }
+      .painel-ludus { left: 16%; right: 4%; bottom: 3%; max-height: 40%; overflow-y: auto; z-index: 4; background: rgba(20,12,9,0.95); border: 1px solid var(--ocre); border-radius: 8px; padding: 10px 12px; }
+      .painel-ludus h3 { margin: 0 0 6px; }
+      .painel-ludus h3 small { color: #8fbf7a; font-weight: normal; }
+      .escolha-lanista .grade { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+      .lanista-opcao { text-align: center; cursor: pointer; color: inherit; font: inherit; border: 2px solid #3a2a20; }
+      .lanista-opcao .thumb { float: none; width: 90px; margin: 0 auto 6px; }
+      .lanista-opcao.escolhido { border-color: #c9a24a; box-shadow: 0 0 12px rgba(201,162,74,0.35); }
+      .thumb { float: left; width: 96px; margin: 0 12px 6px 0; }
+      .thumb img { width: 100%; height: auto; display: block; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+      .card.campeao { border-color: var(--ouro); box-shadow: 0 0 14px rgba(242,210,138,0.25); }
+      .selo {
+        font-size: 0.7rem;
+        background: var(--ouro);
+        color: #2a1a10;
+        border-radius: 3px;
+        padding: 1px 6px;
+        vertical-align: middle;
+        margin-left: 4px;
+        letter-spacing: 0.5px;
+      }
+      details { clear: both; margin-top: 8px; }
+      details summary { cursor: pointer; color: var(--ocre); padding: 4px 0; }
+      .thumb:has(.sprite-card) { height: 140px; display: flex; align-items: flex-end; justify-content: center; }
+      .thumb .sprite-card { width: auto; max-width: 100%; height: 132px; object-fit: contain; image-rendering: pixelated;
+        filter: drop-shadow(0 0 7px var(--q, transparent)) drop-shadow(0 4px 5px rgba(0,0,0,0.6)); }
+      .slot-topo { display: flex; gap: 8px; align-items: center; }
+      .slot-info { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+      .slot-info b { font-size: 0.8rem; }
+      .slot-info small { color: var(--ocre); opacity: 0.8; }
+      .icone-item { flex: none; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; padding: 3px;
+        background: rgba(0,0,0,0.45); border: 2.5px solid var(--q, #9aa0a6); border-radius: 7px; }
+      .icone-item img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+      .icone-vazio { flex: none; width: 40px; height: 40px; border: 2px dashed rgba(242,210,138,0.3); border-radius: 7px; }
+      .btn.mini { padding: 3px 8px; font-size: 0.75rem; }
+      .forja { position: relative; width: 100%; aspect-ratio: 1376 / 768; border-radius: 10px; overflow: hidden; border: 2px solid #3a2616; margin-bottom: 10px; background: #1a110a; }
+      .forja > * { position: absolute; pointer-events: none; }
+      .forja-fundo { inset: 0; width: 100%; height: 100%; display: block; }
+      .forja-camada { background-repeat: no-repeat; }
+      .forja-ferreiro { display: block; height: auto; }
+      .forja-brilho { background: radial-gradient(ellipse at center, rgba(255, 150, 50, 0.55), rgba(255, 110, 30, 0.18) 45%, rgba(255, 90, 20, 0) 70%); mix-blend-mode: screen; animation: forja-pisca 1.1s ease-in-out infinite alternate; }
+      @keyframes forja-pisca { from { opacity: 0.65; transform: scale(0.96); } to { opacity: 1; transform: scale(1.04); } }
+      @media (prefers-reduced-motion: reduce) { .forja-camada, .forja-brilho { animation: none !important; } .forja-camada { background-position-x: 0% !important; } }
+      .btn.pendente { opacity: 0.55; }
+      .basicos { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+      .basicos-classe h5 { margin: 0 0 4px; color: var(--ocre); font-weight: normal; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.8rem; }
+      .basicos-lista { display: flex; flex-direction: column; gap: 4px; }
+      .btn.basico { display: flex; align-items: center; gap: 8px; text-align: left; padding: 3px 8px; font-size: 0.8rem; }
+      .btn.basico > span:not(.icone-item) { flex: 1; }
+      .q-max { color: #ff9f1a; }
+      .inv-item { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+      .item-thumb { width: 60px; }
+      .item-thumb .icone-item { width: 100% !important; height: auto !important; aspect-ratio: 1; }
+      .slots { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+      .slot { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--ocre); }
+      .slot select { width: 100%; font-size: 0.8rem; }
+      .secao { color: var(--ocre); font-weight: normal; margin: 18px 0 8px; letter-spacing: 1px; text-transform: uppercase; font-size: 0.9rem; }
+      .card.item .btn { margin-top: 6px; }
+      .card.item h3 small { color: var(--ocre); font-size: 0.75rem; }
+      .card .linha { margin: 6px 0; }
+      .card .linha select { max-width: 100%; }
+      .card .aviso { font-size: 0.85rem; }
+      .selo.lenda { background: #c24a3a; color: #fff; }
+      .campo { display: inline-flex; flex-direction: column; gap: 4px; font-size: 0.9rem; color: var(--ocre); }
+      .campo input[type="number"] { width: 80px; font-family: inherit; background: var(--bg); color: var(--areia); border: 1px solid var(--ocre); border-radius: 4px; padding: 6px; }
+      .campo input[type="range"] { width: 160px; accent-color: var(--ouro); }
+      .campo input[type="checkbox"] { accent-color: var(--ouro); }
+      @media (max-width: 480px) {
+        #ui { padding: 12px; }
+        h1 { font-size: 1.6rem; letter-spacing: 3px; }
+        .topo { font-size: 0.9rem; }
+        .slots { grid-template-columns: 1fr; }
+        .thumb { width: 84px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="ui"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,34 @@
+[
+  { "id": "gladio_largo", "nome": "Gládio largo", "slot": "arma", "classes": ["murmilo", "samnita"], "bonus": { "forca": 3, "agilidade": -1 }, "preco": 150 },
+  { "id": "maca", "nome": "Maça de ferro", "slot": "arma", "classes": ["murmilo"], "bonus": { "forca": 3, "vitalidade": 1 }, "preco": 130 },
+  { "id": "tridente", "nome": "Tridente", "slot": "arma", "classes": ["retiario"], "bonus": { "forca": 2, "agilidade": 1 }, "preco": 120 },
+  { "id": "adaga", "nome": "Adaga", "slot": "arma", "classes": ["retiario"], "bonus": { "agilidade": 2 }, "preco": 100 },
+  { "id": "sica", "nome": "Sica", "slot": "arma", "classes": ["tracio"], "bonus": { "forca": 1, "agilidade": 1 }, "preco": 140 },
+  { "id": "machadinha", "nome": "Machadinha", "slot": "arma", "classes": ["tracio"], "bonus": { "forca": 2 }, "preco": 110 },
+  { "id": "gladio", "nome": "Gládio", "slot": "arma", "classes": ["samnita"], "bonus": { "forca": 2 }, "preco": 120 },
+  { "id": "espada_curta", "nome": "Espada curta", "slot": "arma", "classes": ["samnita", "tracio"], "bonus": { "forca": 1, "vitalidade": 1 }, "preco": 115 },
+
+  { "id": "escudo_grande", "nome": "Escudo grande", "slot": "acessorio", "classes": ["murmilo"], "bonus": { "vitalidade": 3, "agilidade": -1 }, "preco": 150 },
+  { "id": "escudo_quadrado", "nome": "Escudo quadrado", "slot": "acessorio", "classes": ["murmilo", "samnita"], "bonus": { "vitalidade": 2 }, "preco": 120 },
+  { "id": "escudo_oval", "nome": "Escudo oval", "slot": "acessorio", "classes": ["samnita"], "bonus": { "vitalidade": 1, "forca": 1 }, "preco": 110 },
+  { "id": "escudo_redondo_pequeno", "nome": "Escudo redondo pequeno", "slot": "acessorio", "classes": ["tracio", "samnita"], "bonus": { "agilidade": 2 }, "preco": 90 },
+  { "id": "rede", "nome": "Rede", "slot": "acessorio", "classes": ["retiario"], "bonus": { "agilidade": 3, "sorte": -1 }, "preco": 130 },
+
+  { "id": "elmo_murmilo", "nome": "Elmo de crista", "slot": "elmo", "classes": ["murmilo"], "bonus": { "vitalidade": 2 }, "preco": 130 },
+  { "id": "elmo_viseira", "nome": "Elmo com viseira", "slot": "elmo", "classes": ["samnita"], "bonus": { "vitalidade": 1, "sorte": -1 }, "preco": 120 },
+  { "id": "capacete_frigio", "nome": "Barrete frígio", "slot": "elmo", "classes": ["tracio"], "bonus": { "vitalidade": 1 }, "preco": 70 },
+  { "id": "galero", "nome": "Galero", "slot": "elmo", "classes": ["retiario"], "bonus": { "agilidade": 1 }, "preco": 60 },
+
+  { "id": "peito_leve", "nome": "Peitoral leve", "slot": "peito", "peso": "leve", "classes": ["retiario", "tracio"], "bonus": { "agilidade": 2 }, "preco": 80 },
+  { "id": "peito_couro", "nome": "Couraça de couro", "slot": "peito", "peso": "couro", "classes": ["tracio", "samnita"], "bonus": { "agilidade": 1, "vitalidade": 1 }, "preco": 100 },
+  { "id": "peito_medio", "nome": "Peitoral médio", "slot": "peito", "peso": "medio", "classes": ["murmilo", "samnita"], "bonus": { "vitalidade": 2 }, "preco": 130 },
+  { "id": "peito_pesado", "nome": "Lorica pesada", "slot": "peito", "peso": "pesado", "classes": ["murmilo"], "bonus": { "vitalidade": 4, "agilidade": -2 }, "preco": 180 },
+
+  { "id": "bota_legionaria", "nome": "Bota legionária", "slot": "pe", "classes": ["murmilo", "samnita"], "bonus": { "vitalidade": 1 }, "preco": 70 },
+  { "id": "greva_bronze", "nome": "Greva de bronze", "slot": "pe", "classes": ["murmilo"], "bonus": { "vitalidade": 1, "agilidade": -1 }, "preco": 90 },
+  { "id": "sandalia", "nome": "Sandália", "slot": "pe", "classes": ["retiario", "tracio", "samnita"], "bonus": { "agilidade": 1 }, "preco": 40 },
+
+  { "id": "calcao", "nome": "Calção de lã", "slot": "calca", "classes": ["murmilo", "retiario", "tracio", "samnita"], "bonus": {}, "preco": 30 },
+  { "id": "perneira_couro", "nome": "Perneira de couro", "slot": "calca", "classes": ["murmilo", "samnita", "tracio"], "bonus": { "vitalidade": 1 }, "preco": 80 },
+  { "id": "faixa_coxa", "nome": "Faixa de coxa", "slot": "calca", "classes": ["retiario", "tracio"], "bonus": { "agilidade": 1 }, "preco": 50 }
+]

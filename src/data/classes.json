@@ -1,0 +1,39 @@
+{
+  "_nota": "Valores iniciais. Números de balanceamento serão ajustados depois.",
+  "murmilo": {
+    "nome": "Murmilo",
+    "papel": "tanque",
+    "descricao": "Escudo grande e elmo de crista. Lento para atacar, difícil de derrubar.",
+    "passiva": "guarda",
+    "passivaNome": "Guarda alta",
+    "passivaDescricao": "+2 na rolagem de defesa.",
+    "stats": { "forca": 9, "agilidade": 6, "vitalidade": 12, "sorte": 5 }
+  },
+  "retiario": {
+    "nome": "Retiário",
+    "papel": "controle",
+    "descricao": "Rede e tridente. Rápido, prende o oponente e o deixa vulnerável.",
+    "passiva": "rede",
+    "passivaNome": "Rede",
+    "passivaDescricao": "Quando acerta, o oponente sofre -2 na próxima defesa.",
+    "stats": { "forca": 6, "agilidade": 12, "vitalidade": 8, "sorte": 7 }
+  },
+  "tracio": {
+    "nome": "Trácio",
+    "papel": "ofensivo",
+    "descricao": "Sica e escudo pequeno. Golpes curtos e rápidos, com chance de sequência.",
+    "passiva": "sequencia",
+    "passivaNome": "Sequência",
+    "passivaDescricao": "15% de chance de golpear duas vezes na mesma rodada.",
+    "stats": { "forca": 10, "agilidade": 10, "vitalidade": 7, "sorte": 6 }
+  },
+  "samnita": {
+    "nome": "Samnita",
+    "papel": "generalista",
+    "descricao": "Escudo oval, gládio e peitoral. Equilíbrio entre defesa e ataque.",
+    "passiva": "resistencia",
+    "passivaNome": "Couraça",
+    "passivaDescricao": "Reduz 2 do dano recebido.",
+    "stats": { "forca": 9, "agilidade": 8, "vitalidade": 10, "sorte": 6 }
+  }
+}

@@ -1,0 +1,144 @@
+[
+  {
+    "id": "lanista-1",
+    "nome": "Décimo Aurélio",
+    "especialidade": "murmilo",
+    "titulo": "Ex-gladiador, mestre de veteranos",
+    "historia": "Venceu 21 lutas na areia antes de pendurar o gládio. Comprou o ludus com o prêmio da liberdade e trata cada recruta como o filho que a arena lhe tirou.",
+    "especializacao": "Murmilos: escudo grande e paciência.",
+    "bonus": {
+      "nome": "Escola de Veteranos",
+      "descricao": "Seu campeão começa um nível acima.",
+      "tipo": "campeaoNivel",
+      "valor": 1
+    }
+  },
+  {
+    "id": "lanista-2",
+    "nome": "Públio Vatínio",
+    "especialidade": "retiario",
+    "titulo": "Pescador que virou empresário",
+    "historia": "Filho de pescadores de Óstia, descobriu que a rede rende mais na areia do que no mar. Não tem pressa e nunca paga o preço cheio.",
+    "especializacao": "Retiários: rede, tridente e agilidade.",
+    "bonus": {
+      "nome": "Mercado de Escravos",
+      "descricao": "Escravos custam 20% menos no mercado.",
+      "tipo": "precoEscravo",
+      "valor": 0.8
+    }
+  },
+  {
+    "id": "lanista-3",
+    "nome": "Tito Rúfio",
+    "especialidade": "tracio",
+    "titulo": "Veterano das legiões",
+    "historia": "Serviu na Trácia e voltou com uma cicatriz e uma sica curva. Treina gladiadores como recrutas de legião: sem descanso e sem piedade.",
+    "especializacao": "Trácios: lâmina curva e ataque rápido.",
+    "bonus": {
+      "nome": "Cicatrizes de Guerra",
+      "descricao": "Todos os seus gladiadores ganham +1 de Força.",
+      "tipo": "statsTodos",
+      "valor": 1,
+      "atributo": "forca"
+    }
+  },
+  {
+    "id": "lanista-4",
+    "nome": "Lúcio Varênio",
+    "especialidade": "samnita",
+    "titulo": "Patrício de nome antigo",
+    "historia": "Herdou o ludus de uma família senatorial e usa o sobrenome como arma. Quem luta para ele luta com a honra de Roma nas costas.",
+    "especializacao": "Samnitas: elmo, escudo e disciplina.",
+    "bonus": {
+      "nome": "Nome Nobre",
+      "descricao": "O patrocínio do campeão rende 50% mais por turno.",
+      "tipo": "patrocinio",
+      "valor": 1.5
+    }
+  },
+  {
+    "id": "lanista-5",
+    "nome": "Caio Ópio",
+    "especialidade": "murmilo",
+    "titulo": "Mercador de grãos, dono de cofres",
+    "historia": "Fez fortuna vendendo trigo ao exército e investiu tudo em gladiadores. Não sabe lutar, mas sabe contar, e raramente perde dinheiro.",
+    "especializacao": "Murmilos: escudo grande e paciência.",
+    "bonus": {
+      "nome": "Cofre Cheio",
+      "descricao": "Começa com 150 de ouro a mais.",
+      "tipo": "ouroInicial",
+      "valor": 150
+    }
+  },
+  {
+    "id": "lanista-6",
+    "nome": "Marco Víbio",
+    "especialidade": "retiario",
+    "titulo": "Jovem herdeiro de língua afiada",
+    "historia": "Herdou o ludus aos 25 anos e jura que o pai nunca soube negociar. Convence qualquer um a baixar o preço, mas não aceita perder discussão.",
+    "especializacao": "Retiários: rede, tridente e agilidade.",
+    "bonus": {
+      "nome": "Língua de Prata",
+      "descricao": "Os upgrades do ludus custam 15% menos.",
+      "tipo": "precoUpgrade",
+      "valor": 0.85
+    }
+  },
+  {
+    "id": "lanista-7",
+    "nome": "Quinto Cesário",
+    "especialidade": "tracio",
+    "titulo": "Velho contador do ludus",
+    "historia": "Dizem que viu cair três imperadores e nunca perdeu uma moeda. Anota cada sestércio gasto e corta tudo o que é desperdício.",
+    "especializacao": "Trácios: lâmina curva e ataque rápido.",
+    "bonus": {
+      "nome": "Contas Afiadas",
+      "descricao": "A manutenção do ludus custa 25% menos por turno.",
+      "tipo": "manutencao",
+      "valor": 0.75
+    }
+  },
+  {
+    "id": "lanista-8",
+    "nome": "Sabino Tértulo",
+    "especialidade": "samnita",
+    "titulo": "Dona de ludus e anfitriã dos magistrados",
+    "historia": "Viúva de um lanista, assumiu o ludus e fez dele o mais comentado dos banquetes. Quem a vê lutar pelo ouro não sai sem pagar.",
+    "especializacao": "Samnitas: elmo, escudo e disciplina.",
+    "bonus": {
+      "nome": "Salão de Festas",
+      "descricao": "Vitórias nas arenas de honra rendem 10% mais ouro.",
+      "tipo": "ouroArena",
+      "valor": 1.1
+    }
+  },
+  {
+    "id": "lanista-9",
+    "nome": "Flaco Ássio",
+    "especialidade": "murmilo",
+    "titulo": "Capataz brutal de ludus",
+    "historia": "Começou arrastando correntes e acabou dono delas. Seus gladiadores apanham no treino para não apanhar na areia.",
+    "especializacao": "Murmilos: escudo grande e paciência.",
+    "bonus": {
+      "nome": "Cabeças Duras",
+      "descricao": "Todos os seus gladiadores ganham +1 de Vitalidade.",
+      "tipo": "statsTodos",
+      "valor": 1,
+      "atributo": "vitalidade"
+    }
+  },
+  {
+    "id": "lanista-10",
+    "nome": "Estácio Dólon",
+    "especialidade": "retiario",
+    "titulo": "Envenenador de arenas clandestinas",
+    "historia": "Aprendeu nos subterrâneos de Cápua que a plateia do Poço paga bem por sangue e sem perguntas. Ninguém sabe de onde vem o que ele coloca nas lâminas.",
+    "especializacao": "Retiários: rede, tridente e agilidade.",
+    "bonus": {
+      "nome": "Veneno Barato",
+      "descricao": "Vitórias no Poço rendem 25% mais ouro.",
+      "tipo": "ouroPoco",
+      "valor": 1.25
+    }
+  }
+]

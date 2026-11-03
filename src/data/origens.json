@@ -1,0 +1,50 @@
+[
+  { "id": "galia", "nome": "Gália", "looks": [
+    { "nome": "Belga", "pele": "#f0c9a4", "cabelo": "#c99a3a", "estilo": "longo", "barba": "bigode", "marca": "nenhuma" },
+    { "nome": "Arverno", "pele": "#e6b58a", "cabelo": "#7a4a1e", "estilo": "trancas", "barba": "barba", "marca": "tatuagem" },
+    { "nome": "Sequano", "pele": "#f4d2b2", "cabelo": "#e2c27a", "estilo": "curto", "barba": "nenhuma", "marca": "nenhuma" },
+    { "nome": "Helvécio", "pele": "#d9a57a", "cabelo": "#4a2a14", "estilo": "raspado", "barba": "barba", "marca": "cicatriz" }
+  ]},
+  { "id": "germania", "nome": "Germânia", "looks": [
+    { "nome": "Querusco", "pele": "#f6d7bc", "cabelo": "#e8d08a", "estilo": "longo", "barba": "barba", "marca": "nenhuma" },
+    { "nome": "Cato", "pele": "#f0c4a0", "cabelo": "#8a6a2a", "estilo": "trancas", "barba": "bigode", "marca": "cicatriz" },
+    { "nome": "Suevo", "pele": "#f8dcc4", "cabelo": "#d6b070", "estilo": "curto", "barba": "barba", "marca": "tatuagem" },
+    { "nome": "Bátavo", "pele": "#e9bb93", "cabelo": "#6a3e1a", "estilo": "curto", "barba": "bigode", "marca": "nenhuma" }
+  ]},
+  { "id": "tracia", "nome": "Trácia", "looks": [
+    { "nome": "Odrísio", "pele": "#d9a27a", "cabelo": "#2a1a10", "estilo": "longo", "barba": "barba", "marca": "tatuagem" },
+    { "nome": "Bessos", "pele": "#c98f63", "cabelo": "#1a1008", "estilo": "raspado", "barba": "bigode", "marca": "tatuagem" },
+    { "nome": "Dião", "pele": "#e0ab80", "cabelo": "#4a3020", "estilo": "curto", "barba": "nenhuma", "marca": "cicatriz" },
+    { "nome": "Geta", "pele": "#b97a50", "cabelo": "#2a1a10", "estilo": "trancas", "barba": "barba", "marca": "nenhuma" }
+  ]},
+  { "id": "dacia", "nome": "Dácia", "looks": [
+    { "nome": "Costoboco", "pele": "#e4b08a", "cabelo": "#6a4a2a", "estilo": "longo", "barba": "bigode", "marca": "nenhuma" },
+    { "nome": "Carpo", "pele": "#d4a074", "cabelo": "#2a1a10", "estilo": "curto", "barba": "barba", "marca": "cicatriz" },
+    { "nome": "Dácio livre", "pele": "#eab48c", "cabelo": "#8a5a2a", "estilo": "trancas", "barba": "nenhuma", "marca": "tatuagem" },
+    { "nome": "Bastarna", "pele": "#f2c8a6", "cabelo": "#d8b878", "estilo": "longo", "barba": "barba", "marca": "nenhuma" }
+  ]},
+  { "id": "numidia", "nome": "Numídia", "looks": [
+    { "nome": "Massílio", "pele": "#8a5a34", "cabelo": "#140c08", "estilo": "curto", "barba": "nenhuma", "marca": "cicatriz" },
+    { "nome": "Masesílio", "pele": "#7a4a2a", "cabelo": "#140c08", "estilo": "raspado", "barba": "barba", "marca": "tatuagem" },
+    { "nome": "Garamante", "pele": "#6e4226", "cabelo": "#1a100a", "estilo": "trancas", "barba": "bigode", "marca": "nenhuma" },
+    { "nome": "Nasamão", "pele": "#94603a", "cabelo": "#201208", "estilo": "longo", "barba": "barba", "marca": "cicatriz" }
+  ]},
+  { "id": "hispania", "nome": "Hispânia", "looks": [
+    { "nome": "Lusitano", "pele": "#e0b08a", "cabelo": "#3a2414", "estilo": "curto", "barba": "barba", "marca": "nenhuma" },
+    { "nome": "Celtibero", "pele": "#f0c8a0", "cabelo": "#9a5a24", "estilo": "longo", "barba": "bigode", "marca": "tatuagem" },
+    { "nome": "Vetão", "pele": "#d8a484", "cabelo": "#2a1a10", "estilo": "raspado", "barba": "nenhuma", "marca": "cicatriz" },
+    { "nome": "Astur", "pele": "#f2d0b0", "cabelo": "#c8a060", "estilo": "trancas", "barba": "barba", "marca": "nenhuma" }
+  ]},
+  { "id": "siria", "nome": "Síria", "looks": [
+    { "nome": "Palmireno", "pele": "#d6a074", "cabelo": "#1a100a", "estilo": "curto", "barba": "barba", "marca": "nenhuma" },
+    { "nome": "Nabateu", "pele": "#c48a5a", "cabelo": "#140c08", "estilo": "longo", "barba": "bigode", "marca": "tatuagem" },
+    { "nome": "Emeseno", "pele": "#e2b08a", "cabelo": "#2a1a10", "estilo": "raspado", "barba": "nenhuma", "marca": "cicatriz" },
+    { "nome": "Arábio", "pele": "#b87a4a", "cabelo": "#0e0804", "estilo": "trancas", "barba": "barba", "marca": "nenhuma" }
+  ]},
+  { "id": "britania", "nome": "Britânia", "looks": [
+    { "nome": "Icênio", "pele": "#f2cca8", "cabelo": "#c0802a", "estilo": "longo", "barba": "bigode", "marca": "tatuagem" },
+    { "nome": "Brigante", "pele": "#f0c4a0", "cabelo": "#7a3a1a", "estilo": "trancas", "barba": "barba", "marca": "nenhuma" },
+    { "nome": "Catuvelauno", "pele": "#e8b890", "cabelo": "#4a2a14", "estilo": "curto", "barba": "nenhuma", "marca": "cicatriz" },
+    { "nome": "Pícto", "pele": "#d8a278", "cabelo": "#1a100a", "estilo": "raspado", "barba": "barba", "marca": "tatuagem" }
+  ]}
+]

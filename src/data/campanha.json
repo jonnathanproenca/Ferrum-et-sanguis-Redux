@@ -1,0 +1,182 @@
+{
+  "_nota": "Estrutura da campanha. Os números em 'valor' são placeholders; ajustar no balanceamento. Cada passo enfrenta o próximo lanista da fila, só após vencer o anterior. formato: 1 = 1 contra 1; 2 = 2 contra 2 (o jogador escolhe 2 gladiadores). Lutas contra lanistas são até a morte.",
+  "passos": [
+    {
+      "titulo": "Duelo de Abertura",
+      "requisitos": [
+        {
+          "tipo": "vitoriasTotais",
+          "valor": 3
+        }
+      ],
+      "regra": {
+        "nome": "Duelo de honra",
+        "descricao": "Luta de abertura, sem regras especiais.",
+        "bonus": {},
+        "efeitosPoco": false,
+        "letal": false
+      },
+      "formato": 1
+    },
+    {
+      "titulo": "Areia Pesada",
+      "requisitos": [
+        {
+          "tipo": "vitoriasTotais",
+          "valor": 5
+        }
+      ],
+      "regra": {
+        "nome": "Areia pesada",
+        "descricao": "O rival luta em areia encharcada: -1 de agilidade.",
+        "bonus": {
+          "agilidade": -1
+        },
+        "efeitosPoco": false,
+        "letal": false
+      },
+      "formato": 1
+    },
+    {
+      "titulo": "Gladiador de Honra",
+      "requisitos": [
+        {
+          "tipo": "gladiadorVitorias",
+          "valor": 4
+        }
+      ],
+      "regra": {
+        "nome": "Campeão de honra",
+        "descricao": "O rival traz um campeão: +2 de vitalidade.",
+        "bonus": {
+          "vitalidade": 2
+        },
+        "efeitosPoco": false,
+        "letal": false
+      },
+      "formato": 2
+    },
+    {
+      "titulo": "Sangue do Poço",
+      "requisitos": [
+        {
+          "tipo": "gladiadorPoco",
+          "valor": 2
+        }
+      ],
+      "regra": {
+        "nome": "Golpes sujos",
+        "descricao": "Os golpes podem causar efeitos do Poço.",
+        "bonus": {},
+        "efeitosPoco": true,
+        "letal": false
+      },
+      "formato": 1
+    },
+    {
+      "titulo": "Lâmina Afiada",
+      "requisitos": [
+        {
+          "tipo": "vitoriasTotais",
+          "valor": 10
+        }
+      ],
+      "regra": {
+        "nome": "Lâmina afiada",
+        "descricao": "O rival usa gládio de ferro: +2 de força.",
+        "bonus": {
+          "forca": 2
+        },
+        "efeitosPoco": false,
+        "letal": false
+      },
+      "formato": 1
+    },
+    {
+      "titulo": "Escudo contra Escudo",
+      "requisitos": [
+        {
+          "tipo": "gladiadorVitorias",
+          "valor": 6,
+          "classe": "murmilo"
+        }
+      ],
+      "regra": {
+        "nome": "Muralha",
+        "descricao": "Um murmilo do rival: +3 de vitalidade.",
+        "bonus": {
+          "vitalidade": 3
+        },
+        "efeitosPoco": false,
+        "letal": false
+      },
+      "formato": 2
+    },
+    {
+      "titulo": "Tempestade de Areia",
+      "requisitos": [
+        {
+          "tipo": "vitoriasTotais",
+          "valor": 14
+        },
+        {
+          "tipo": "gladiadorEquipado",
+          "item": "gladio"
+        }
+      ],
+      "regra": {
+        "nome": "Tempestade",
+        "descricao": "Vento forte: efeitos do Poço e +1 de sorte ao rival.",
+        "bonus": {
+          "sorte": 1
+        },
+        "efeitosPoco": true,
+        "letal": false
+      },
+      "formato": 1
+    },
+    {
+      "titulo": "Fosso Profundo",
+      "requisitos": [
+        {
+          "tipo": "gladiadorPoco",
+          "valor": 4
+        }
+      ],
+      "regra": {
+        "nome": "Fosso",
+        "descricao": "Luta no fosso: efeitos do Poço e +1 de agilidade ao rival.",
+        "bonus": {
+          "agilidade": 1
+        },
+        "efeitosPoco": true,
+        "letal": false
+      },
+      "formato": 1
+    },
+    {
+      "titulo": "Nêmesis",
+      "requisitos": [
+        {
+          "tipo": "vitoriasTotais",
+          "valor": 20
+        },
+        {
+          "tipo": "gladiadorVitorias",
+          "valor": 8
+        }
+      ],
+      "regra": {
+        "nome": "Até a morte",
+        "descricao": "Luta final. O perdedor morre. Efeitos do Poço ativos.",
+        "bonus": {
+          "forca": 2,
+          "vitalidade": 2
+        },
+        "efeitosPoco": true,
+        "letal": true
+      },
+      "formato": 2
+    }
+  ]
+}
