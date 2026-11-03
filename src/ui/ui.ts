@@ -588,7 +588,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       .join('');
     return `${forja()}
       <h4 class="secao">Armeiro mestre</h4>
-      <p class="meta">Três peças especiais, sorteadas a cada rodada. Todo gladiador já recebe o kit básico ao escolher o estilo, então aqui só há peças melhores. Chances: <span style="color:${COR_QUALIDADE[1]}">Superior 60%</span> · <span style="color:${COR_QUALIDADE[2]}">Rara 25%</span> · <span style="color:${COR_QUALIDADE[3]}">Épica 11%</span> · <span style="color:${COR_QUALIDADE[4]}">Lendária 4%</span>.</p>
+      <p class="meta">Cinco peças especiais, sorteadas a cada rodada (no máximo 3 Superiores, 2 Raras, 2 Épicas e 1 Lendária). Todo gladiador já recebe o kit básico ao escolher o estilo, então aqui só há peças melhores. Chances: <span style="color:${COR_QUALIDADE[1]}">Superior 60%</span> · <span style="color:${COR_QUALIDADE[2]}">Rara 25%</span> · <span style="color:${COR_QUALIDADE[3]}">Épica 11%</span> · <span style="color:${COR_QUALIDADE[4]}">Lendária 4%</span>.</p>
       <div class="grade">${mestre || '<p class="meta">Tudo vendido. Novas peças na próxima rodada.</p>'}</div>
       <h4 class="secao">No armeiro</h4>
       <ul class="registro">${guardados || '<li class="meta">Nenhum item guardado.</li>'}</ul>`;

@@ -383,15 +383,51 @@ export function sortearQualidadeMestre(r: number): number {
   return CHANCE_MESTRE[0].qualidade;
 }
 
-/** Sorteia as 3 ofertas do armeiro mestre (só peças especiais, de qualidade superior ou melhor, por chance decrescente). */
+/** Quantas peças o armeiro mestre oferece por rodada. */
+export const PECAS_MESTRE = 5;
+/** Máximo de peças de cada qualidade (1 a 4) numa mesma rodada. */
+export const LIMITE_QUALIDADE_MESTRE: Record<number, number> = { 1: 3, 2: 2, 3: 2, 4: 1 };
+/** Máximo de peças Superiores (verdes) lado a lado. */
+export const MAX_VERDES_SEGUIDOS = 2;
+
+/**
+ * Sorteia as qualidades de uma rodada do armeiro mestre, na ordem em que aparecem, respeitando os limites:
+ * no máximo 3 verdes (e nunca 3 seguidas), 2 azuis, 2 roxas e 1 laranja. Dentro do que sobra permitido, vale a chance de cada qualidade.
+ */
+export function sortearQualidadesMestre(proximo: () => number, n = PECAS_MESTRE): number[] {
+  const res: number[] = [];
+  const cont: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  for (let i = 0; i < n; i++) {
+    const verdesSeguidos = res.length >= MAX_VERDES_SEGUIDOS && res.slice(-MAX_VERDES_SEGUIDOS).every((q) => q === 1);
+    const permitidas = CHANCE_MESTRE.filter(
+      ({ qualidade }) => cont[qualidade] < LIMITE_QUALIDADE_MESTRE[qualidade] && !(qualidade === 1 && verdesSeguidos),
+    );
+    const total = permitidas.reduce((t, x) => t + x.chance, 0);
+    let r = proximo() * total;
+    let escolhida = permitidas[permitidas.length - 1].qualidade;
+    for (const { qualidade, chance } of permitidas) {
+      if (r < chance) {
+        escolhida = qualidade;
+        break;
+      }
+      r -= chance;
+    }
+    cont[escolhida]++;
+    res.push(escolhida);
+  }
+  return res;
+}
+
+/** Sorteia as ofertas do armeiro mestre (só peças especiais, qualidade superior ou melhor, com chance decrescente e limites por rodada). */
 export function gerarArmeiroMestre(e: Estado): void {
   const rng = proximoRng(e);
   const pool = ITENS.filter((i) => !i.basico).map((i) => i.id);
+  const qualidades = sortearQualidadesMestre(() => rng.next());
   const oferta: string[] = [];
-  while (oferta.length < 3) {
-    const base = pool[rng.int(0, pool.length - 1)];
-    if (oferta.some((o) => separarId(o).base === base)) continue;
-    oferta.push(comQualidade(base, sortearQualidadeMestre(rng.next())));
+  for (const q of qualidades) {
+    let base = pool[rng.int(0, pool.length - 1)];
+    while (oferta.some((o) => separarId(o).base === base)) base = pool[rng.int(0, pool.length - 1)];
+    oferta.push(comQualidade(base, q));
   }
   e.armeiroMestre = oferta;
 }

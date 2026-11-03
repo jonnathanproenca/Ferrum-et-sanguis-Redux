@@ -33,6 +33,8 @@ import {
   gerarMercado,
   sortearQualidadeMestre,
   gerarArmeiroMestre,
+  sortearQualidadesMestre,
+  PECAS_MESTRE,
   temMelhoria,
   tratar,
   treinar,
@@ -171,9 +173,9 @@ describe('equipamento por slot', () => {
     }
   });
 
-  it('armeiro mestre oferece 3 peças especiais, vende uma vez e renova a cada rodada', () => {
+  it('armeiro mestre oferece 5 peças especiais, vende uma vez e renova a cada rodada', () => {
     const { e, campeao } = campeaoMurmilo(5);
-    expect(e.armeiroMestre).toHaveLength(3);
+    expect(e.armeiroMestre).toHaveLength(5);
     for (const id of e.armeiroMestre ?? []) {
       const item = itemPorId(id);
       expect(item.qualidade).toBeGreaterThanOrEqual(1);
@@ -184,13 +186,13 @@ describe('equipamento por slot', () => {
     comprarMestre(e, oferta);
     expect(e.ouro).toBe(ouro - itemPorId(oferta).preco);
     expect(e.inventario).toContain(oferta);
-    expect(e.armeiroMestre).toHaveLength(2);
+    expect(e.armeiroMestre).toHaveLength(4);
     expect(() => comprarMestre(e, oferta)).toThrow(/à venda/);
     const antes = [...(e.armeiroMestre as string[])];
     e.energia = 0;
     e.energia = 0;
     avancarTurno(e);
-    expect(e.armeiroMestre).toHaveLength(3);
+    expect(e.armeiroMestre).toHaveLength(5);
     expect(e.armeiroMestre).not.toEqual(antes);
     expect(campeao).toBeTruthy();
   });
@@ -669,11 +671,27 @@ describe('armeiro mestre: chance por qualidade', () => {
     expect(cont[4]).toBeGreaterThan(0);
   });
 
-  it('as 3 ofertas são peças especiais, de qualidade 1 a 4', () => {
+  it('cada rodada tem 5 peças, no máximo 3 verdes (nunca 3 seguidas), 2 azuis, 2 roxas e 1 laranja', () => {
+    let seed = 12345;
+    const rnd = (): number => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+    for (let i = 0; i < 5000; i++) {
+      const q = sortearQualidadesMestre(rnd);
+      expect(q).toHaveLength(5);
+      const c = (n: number): number => q.filter((x) => x === n).length;
+      expect(c(1)).toBeLessThanOrEqual(3);
+      expect(c(2)).toBeLessThanOrEqual(2);
+      expect(c(3)).toBeLessThanOrEqual(2);
+      expect(c(4)).toBeLessThanOrEqual(1);
+      for (let k = 0; k + 2 < q.length; k++) expect(q[k] === 1 && q[k + 1] === 1 && q[k + 2] === 1).toBe(false);
+    }
+  });
+
+  it('as 5 ofertas são peças especiais diferentes, de qualidade 1 a 4', () => {
     const e = novoJogo(11);
     for (let i = 0; i < 30; i++) {
       gerarArmeiroMestre(e);
-      expect(e.armeiroMestre).toHaveLength(3);
+      expect(e.armeiroMestre).toHaveLength(PECAS_MESTRE);
+      expect(new Set((e.armeiroMestre as string[]).map((id) => id.split('@')[0])).size).toBe(PECAS_MESTRE);
       for (const id of e.armeiroMestre as string[]) {
         const item = itemPorId(id);
         expect(item.basico).toBeFalsy();
