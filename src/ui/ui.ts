@@ -3,6 +3,7 @@ import { iconeItem } from '../art/icones';
 import { FORJA } from '../art/armeiro';
 import { ESCRITORIO } from '../art/engenheiro';
 import { ENFERMARIA } from '../art/enfermaria';
+import { MERCADO, SPRITES_ESCRAVO } from '../art/mercado';
 import { SPRITES_CLASSE } from '../art/sprites';
 import { varianteDe } from '../art/variantes';
 import { pixelarImagens, colorirSprites } from '../art/pixel';
@@ -176,12 +177,12 @@ export function montarUi(raiz: HTMLElement, opcoes: {
 
   /** Gladiador com a mesma sprite da arena (pose de guarda), na cor do seu id e com moldura da melhor peça. */
   function gladiadorImg(g: Gladiador): string {
+    if (g.semEstilo) return `<img class="gladiador-img sprite-card sprite-escravo" src="${SPRITES_ESCRAVO[g.look % SPRITES_ESCRAVO.length]}" alt="" draggable="false">`;
     const q = Math.max(0, ...SLOTS.map((sl) => qualidadeDe(g.equipamento[sl])));
     const cor = q > 0 ? COR_QUALIDADE[q] : 'transparent';
     const set = SPRITES_CLASSE[g.classe];
     const quadro = set?.quadros.guarda;
     if (!quadro) return '';
-    if (g.semEstilo) return `<img class="gladiador-img sprite-card sem-estilo" src="${quadro.arquivo}" alt="" draggable="false">`;
     return `<img class="gladiador-img sprite-card" data-sprite="${quadro.arquivo}" data-variante="${varianteDe(g.id)}" src="${quadro.arquivo}" style="--q:${cor}" alt="" draggable="false">`;
   }
 
@@ -498,7 +499,13 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     const lotado = s.gladiadores.length >= capacidadeLudus(s) && capacidadeLudus(s) < MAX_GLADIADORES
       ? `<p class="aviso">Ludus lotado (${s.gladiadores.length}/${capacidadeLudus(s)}). Construa os alojamentos para ampliar.</p>`
       : '';
-    return `${lotado}<p class="meta">O mercado vende escravos e é renovado a cada turno. Cada um traz uma tendência de atributo, uma terra e uma condição física. Depois de comprado, você escolhe o estilo em que ele vai lutar e ele recebe o kit básico.</p>
+    const m = MERCADO.mercador;
+    const pc = (v: number, total: number): string => `${((v / total) * 100).toFixed(3)}%`;
+    const cena = `<div class="forja mercado" role="img" aria-label="Mercador de escravos aguardando compradores">
+      <img class="forja-fundo" src="${MERCADO.fundo}" alt="" draggable="false">
+      <img class="forja-ferreiro" src="${m.arquivo}" alt="" draggable="false" style="left:${pc(m.x, MERCADO.w)};top:${pc(m.y, MERCADO.h)};width:${pc(m.w, MERCADO.w)};aspect-ratio:${m.w}/${m.h}">
+    </div>`;
+    return `${cena}${lotado}<p class="meta">O mercado vende escravos e é renovado a cada turno. Cada um traz uma tendência de atributo, uma terra e uma condição física. Depois de comprado, você escolhe o estilo em que ele vai lutar e ele recebe o kit básico.</p>
       <div class="grade">${s.mercado.map((g) => cardMercado(s, g)).join('')}</div>`;
   }
 
