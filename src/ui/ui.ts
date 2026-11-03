@@ -477,20 +477,6 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       <div class="grade">${s.mercado.map((g) => cardMercado(s, g)).join('')}</div>`;
   }
 
-  /** Keyframes de uma tira de quadros: cada passo troca o quadro (q) ou esconde a camada (null). */
-  function keyframesTira(nome: string, quadros: number, passos: { q: number | null; ms: number }[]): { css: string; total: number } {
-    const total = passos.reduce((t, p) => t + p.ms, 0);
-    let acc = 0;
-    const linhas = passos.map((p) => {
-      const pct = ((acc / total) * 100).toFixed(3);
-      acc += p.ms;
-      return p.q === null
-        ? `${pct}% { opacity: 0; }`
-        : `${pct}% { opacity: 1; background-position-x: ${((p.q / (quadros - 1)) * 100).toFixed(3)}%; }`;
-    });
-    return { css: `@keyframes ${nome} { ${linhas.join(' ')} }`, total };
-  }
-
   /** Cena da forja: fundo, brilho e fogo da fornalha e o ferreiro martelando uma lâmina (animação com faíscas). */
   function forja(): string {
     const pc = (v: number, total: number): string => `${((v / total) * 100).toFixed(3)}%`;
@@ -498,15 +484,10 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       `left:${pc(c.x, FORJA.w)};top:${pc(c.y, FORJA.h)};width:${pc(c.w, FORJA.w)};aspect-ratio:${c.w}/${c.h}`;
     const f = FORJA.fogo;
     const m = FORJA.ferreiro;
-    const passoMs = (fps: number): number => 1000 / fps;
-    const kf = keyframesTira('forja-fogo', f.quadros, f.sequencia.map((q) => ({ q: q - 1, ms: passoMs(f.fps) })));
-    const tira = (c: { arquivo: string; quadros: number }, anim: string, ms: number): string =>
-      `background-image:url(${c.arquivo});background-size:${c.quadros * 100}% 100%;animation:${anim} ${ms.toFixed(0)}ms step-end infinite`;
     return `<div class="forja" role="img" aria-label="Ferreiro forjando uma lâmina na bigorna">
-      <style>${kf.css}</style>
       <img class="forja-fundo" src="${FORJA.fundo}" alt="" draggable="false">
       <div class="forja-brilho" style="left:${pc(f.x - 70, FORJA.w)};top:${pc(f.y - 60, FORJA.h)};width:${pc(f.w + 140, FORJA.w)};aspect-ratio:${f.w + 140}/${f.h + 120}"></div>
-      <div class="forja-camada" style="${cam(f)};${tira(f, 'forja-fogo', kf.total)}"></div>
+      <img class="forja-ferreiro" src="${f.arquivo}" alt="" draggable="false" style="${cam(f)}">
       <img class="forja-ferreiro" src="${m.arquivo}" alt="" draggable="false" style="${cam(m)}">
     </div>`;
   }
