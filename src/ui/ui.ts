@@ -169,6 +169,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
 }): void {
   new MutationObserver(() => { pixelarImagens(raiz); colorirSprites(raiz); }).observe(raiz, { childList: true, subtree: true });
   let e: Estado | null = null;
+  let videoEspartacoVisto = false;
   // Tempo de jogo: conta só com a aba visível e com um ludus em andamento.
   setInterval(() => {
     if (!e || menuAberto || escolhendo || document.visibilityState !== 'visible') return;
@@ -1035,8 +1036,37 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     }
   }
 
+  /** Cena de entrada do Espártaco: toca antes da luta final contra Batiatus (pode pular). */
+  function entradaEspartaco(depois: () => void): void {
+    const prefs = audio.prefs();
+    const ativoAntes = prefs.ativo;
+    const ov = document.createElement('div');
+    ov.className = 'video-entrada';
+    ov.innerHTML = `<video src="${import.meta.env.BASE_URL}assets/video/entrada-espartaco.mp4" playsinline autoplay ${ativoAntes ? '' : 'muted'}></video><button class="btn" type="button">Pular</button>`;
+    let fim = false;
+    const terminar = (): void => {
+      if (fim) return;
+      fim = true;
+      ov.remove();
+      if (ativoAntes) audio.definirPrefs({ ativo: true });
+      depois();
+    };
+    if (ativoAntes) audio.definirPrefs({ ativo: false });
+    const v = ov.querySelector('video') as HTMLVideoElement;
+    v.addEventListener('ended', terminar);
+    v.addEventListener('error', terminar);
+    v.play().catch(terminar);
+    (ov.querySelector('button') as HTMLButtonElement).addEventListener('click', terminar);
+    document.body.appendChild(ov);
+  }
+
   function lutarNaCampanha(): void {
     if (!e) return;
+    if (proximoDesafio(e)?.lanista.id === 'batiatus' && !videoEspartacoVisto) {
+      videoEspartacoVisto = true;
+      return entradaEspartaco(lutarNaCampanha);
+    }
+    videoEspartacoVisto = false;
     const ids = equipeValida(e).map((g) => g.id);
     try {
       const antes = structuredClone(e);
