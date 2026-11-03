@@ -60,7 +60,12 @@
       .camp-trilha .atual b { border-color: #d6452f; color: #fff; background: #8a1c1c; box-shadow: 0 0 10px #d6452f; animation: camp-pulsa 1.6s ease-in-out infinite; }
       @keyframes camp-pulsa { 50% { box-shadow: 0 0 18px #ff6a4a; } }
       .camp-palco .sel-info { top: 3%; }
-      .camp-fig { bottom: 12%; }
+      .camp-fig { bottom: 12%; cursor: default; pointer-events: none; }
+      .camp-fig.vencido { filter: grayscale(1) brightness(.55) drop-shadow(0 6px 4px rgba(0,0,0,.55)); }
+      .camp-fig.vencido::after { content: '✕'; position: absolute; left: 50%; top: 40%; transform: translateX(-50%); color: #d6452f; font-size: clamp(1rem, 4vw, 2rem); text-shadow: 0 0 6px #000; }
+      .camp-fig.futuro { filter: brightness(0) drop-shadow(0 0 3px rgba(201,162,74,.35)); opacity: .55; }
+      .camp-fig.ativo { transform: translateY(-5%) scale(1.06); }
+      .camp-num { position: absolute; left: 50%; bottom: -12%; transform: translateX(-50%); min-width: 1.6em; text-align: center; background: rgba(15,9,6,.88); border: 1px solid #c9a24a; color: #f2e6c8; font-size: clamp(.6rem, 1.5vw, .85rem); padding: 1px 4px; }
       .camp-fig .camp-nome { position: absolute; left: 50%; bottom: -13%; transform: translateX(-50%); white-space: nowrap; background: rgba(15,9,6,.88); border: 1px solid #c9a24a; padding: 2px 10px; color: #f2e6c8; font-size: clamp(.6rem, 1.6vw, .95rem); text-align: center; }
       .camp-fig .camp-nome small { display: block; color: #c9a24a; font-size: .8em; }
       .camp-duelo { margin: 12px 0; padding: 14px; text-align: center; background: linear-gradient(180deg, #2a1812, #170d09); border: 2px solid #c9a24a; box-shadow: 0 0 0 4px #130c09, 0 10px 30px rgba(0,0,0,.6); }

@@ -223,6 +223,7 @@ export interface Cheats {
   lendario: boolean;
   energia: boolean;
   round: boolean;
+  campanha: boolean;
 }
 export const CHEATS_NOMES: Record<keyof Cheats, string> = {
   ouro: 'Dinheiro infinito',
@@ -232,6 +233,7 @@ export const CHEATS_NOMES: Record<keyof Cheats, string> = {
   lendario: '100% itens lendários no armeiro',
   energia: 'Energia infinita',
   round: 'Pular rodada sem gastar energia',
+  campanha: 'Ignorar as condições da campanha (pular todos os passos)',
 };
 
 /** A dificuldade é escolhida ao criar o ludus e não muda. Saves antigos jogam no Médio. */
@@ -287,17 +289,16 @@ export const LOTACOES_POCO: Record<LotacaoPoco, { bonus: number; moedas: [number
 const LOTACOES_ORDEM: LotacaoPoco[] = ['vazia', 'meia', 'cheia'];
 
 export interface Desafio {
-  /** Lanista escolhido para o passo; null enquanto o jogador não escolhe. */
-  lanista: Lanista | null;
-  /** Opções oferecidas neste passo (vazias depois da escolha). */
-  opcoes: Lanista[];
+  /** Rival fixo deste passo, conforme a sequência da casa. */
+  lanista: Lanista;
+  /** Sequência completa da campanha desta casa (para mostrar o progresso). */
+  sequencia: Lanista[];
   passo: Passo;
   indice: number;
   requisitos: { texto: string; ok: boolean }[];
   pronto: boolean;
 }
 
-const OPCOES_LANISTA = 3;
 
 // ---------- Utilitários internos ----------
 
@@ -405,9 +406,35 @@ export function arenaPorId(id: string): Arena {
   return a;
 }
 
+/** Os dois últimos rivais da campanha, sempre nesta ordem, qualquer que seja o lanista do jogador. */
+export const FINAIS: Lanista[] = [
+  { id: 'batiatus', nome: 'Lêntulo Batiatus', especialidade: 'murmilo', titulo: 'O lanista de Cápua', historia: 'Dono do ludus mais temido da Campânia, só enfrenta quem já provou valor.' },
+  { id: 'espartaco', nome: 'Espártaco', especialidade: 'tracio', titulo: 'O campeão invicto', historia: 'Trácio que a arena não conseguiu quebrar. O último desafio da sua carreira.' },
+];
+
+function hashTexto(t: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+/**
+ * Sequência fixa da campanha de cada lanista: os rivais vêm numa ordem própria da casa e a
+ * campanha termina sempre com Batiatus e, por último, Espártaco.
+ */
+export function sequenciaCampanha(casaId: string): Lanista[] {
+  const outros = LANISTAS.filter((l) => l.id !== casaId);
+  const rng = new Rng(hashTexto(casaId));
+  for (let i = outros.length - 1; i > 0; i--) {
+    const j = rng.int(0, i);
+    [outros[i], outros[j]] = [outros[j], outros[i]];
+  }
+  return [...outros.slice(0, PASSOS.length - FINAIS.length), ...FINAIS];
+}
+
 /** Lanistas rivais, na ordem em que enfrentam o jogador na campanha. */
 export function filaLanistas(e: Estado): Lanista[] {
-  return LANISTAS.filter((l) => l.id !== e.casaId);
+  return sequenciaCampanha(e.casaId);
 }
 
 // ---------- Partida ----------
@@ -443,9 +470,9 @@ export function novoJogo(semente: number = Date.now() % 2147483646, casaId?: str
 
   e.gladiadores.push(gerarGladiador(rng, novoId(e), casa.especialidade, nivelCampeao, 'livre', regrasDe(e).campeao === 0));
   for (const l of filaLanistas(e)) {
-    e.campeoesRivais[l.id] = gerarGladiador(rng, `campeao-${l.id}`, l.especialidade, 4, 'livre', true);
+    const nivel = l.id === 'batiatus' ? 6 : l.id === 'espartaco' ? 8 : 4;
+    e.campeoesRivais[l.id] = gerarGladiador(rng, `campeao-${l.id}`, l.especialidade, nivel, 'livre', true);
   }
-  sortearOpcoes(e, rng);
   gerarMercado(e);
   gerarArmeiroMestre(e);
   registrar(e, `Você comanda ${casa.nome}, casa de ${CLASSES[casa.especialidade].nome}. Dificuldade ${regrasDe(e).nome}: ${regrasDe(e).campeao === 0 ? 'seu primeiro gladiador já é o campeão' : `com ${regrasDe(e).campeao} vitórias, um deles será o campeão`}.`);
@@ -965,48 +992,26 @@ function cumpre(e: Estado, r: Requisito): boolean {
   }
 }
 
-/** Sorteia os lanistas oferecidos no passo atual, entre os que ainda não foram derrotados. */
-function sortearOpcoes(e: Estado, rng: Rng): void {
-  const derrotados = e.derrotados ?? [];
-  const pool = filaLanistas(e).filter((l) => !derrotados.includes(l.id));
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = rng.int(0, i);
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  e.opcoesLanista = pool.slice(0, OPCOES_LANISTA).map((l) => l.id);
-  e.escolhaLanista = null;
-}
-
-function opcoesDoPasso(e: Estado): Lanista[] {
-  if (!e.opcoesLanista) sortearOpcoes(e, new Rng(e.semente));
-  return (e.opcoesLanista ?? []).flatMap((id) => {
-    const l = LANISTAS.find((x) => x.id === id);
-    return l ? [l] : [];
-  });
-}
-
 export function proximoDesafio(e: Estado): Desafio | null {
   if (e.campanha >= PASSOS.length) return null;
   const passo = PASSOS[e.campanha];
-  const lanista = e.escolhaLanista ? LANISTAS.find((l) => l.id === e.escolhaLanista) ?? null : null;
-  const requisitos = passo.requisitos.map((r) => ({ texto: textoRequisito(r), ok: cumpre(e, r) }));
+  const sequencia = sequenciaCampanha(e.casaId);
+  const lanista = sequencia[e.campanha];
+  if (!e.campeoesRivais[lanista.id]) {
+    // Saves antigos não têm os campeões de Batiatus e Espártaco.
+    const nivel = lanista.id === 'batiatus' ? 6 : lanista.id === 'espartaco' ? 8 : 4;
+    e.campeoesRivais[lanista.id] = gerarGladiador(proximoRng(e), `campeao-${lanista.id}`, lanista.especialidade, nivel, 'livre', true);
+  }
+  const ignora = !!e.cheats?.campanha;
+  const requisitos = passo.requisitos.map((r) => ({ texto: textoRequisito(r), ok: ignora || cumpre(e, r) }));
   return {
     lanista,
-    opcoes: opcoesDoPasso(e),
+    sequencia,
     passo,
     indice: e.campanha,
     requisitos,
-    pronto: lanista !== null && requisitos.every((r) => r.ok),
+    pronto: requisitos.every((r) => r.ok),
   };
-}
-
-/** O jogador escolhe, entre as opções do passo, o lanista que vai enfrentar. */
-export function escolherLanista(e: Estado, id: string): void {
-  if (e.campanha >= PASSOS.length) throw new Error('A campanha já foi concluída.');
-  const escolhido = opcoesDoPasso(e).find((l) => l.id === id);
-  if (!escolhido) throw new Error('Este lanista não está entre as opções deste passo.');
-  e.escolhaLanista = id;
-  registrar(e, `Desafio aceito: ${escolhido.nome} (${CLASSES[escolhido.especialidade].nome}).`);
 }
 
 /** Lutas dos lanistas: sempre até a morte. O formato (1 ou 2) vem do passo da campanha. */
@@ -1014,7 +1019,6 @@ export function lutarCampanha(e: Estado, gladIds: string[]): PayloadLuta {
   const desafio = proximoDesafio(e);
   if (!desafio) throw new Error('A campanha já foi concluída.');
   const lanista = desafio.lanista;
-  if (!lanista) throw new Error('Escolha o lanista deste passo antes de lutar.');
   if (!desafio.pronto) throw new Error('Os requisitos deste passo ainda não foram cumpridos.');
   const formato = desafio.passo.formato ?? 1;
   if (gladIds.length !== formato) {
@@ -1051,8 +1055,6 @@ export function lutarCampanha(e: Estado, gladIds: string[]): PayloadLuta {
   if (payload.vitoriaA) {
     e.campanha += 1;
     e.derrotados = [...(e.derrotados ?? []), lanista.id];
-    if (e.campanha < PASSOS.length) sortearOpcoes(e, proximoRng(e));
-    else e.escolhaLanista = null;
   }
   return payload;
 }

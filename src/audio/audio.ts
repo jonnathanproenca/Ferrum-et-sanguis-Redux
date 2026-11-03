@@ -313,6 +313,11 @@ class Motor {
       .then((d) => c.decodeAudioData(d))
       .then((b) => {
         this.buffers.set(chave, b);
+        const pend = this.pendentes.get(chave);
+        if (pend) {
+          this.pendentes.delete(chave);
+          if (performance.now() - pend.em < 4000) this.tocarArquivo(chave, pend.vol, pend.bus);
+        }
         this.efetiva = '';
         this.tocarTrilha(this.desejada);
         this.aplicarCena();
@@ -328,9 +333,13 @@ class Motor {
     return saida;
   }
 
-  private tocarArquivo(chave: string, vol: number, bus: AudioNode, atraso = 0): boolean {
+  /** Efeitos pedidos antes de o arquivo terminar de carregar: tocam assim que ele fica pronto (até 4 s depois). */
+  private pendentes = new Map<string, { vol: number; bus: AudioNode; em: number }>();
+
+  private tocarArquivo(chave: string, vol: number, bus: AudioNode, atraso = 0, esperar = false): boolean {
     const c = this.ctx;
     const buf = this.obter(chave);
+    if (!buf && esperar) this.pendentes.set(chave, { vol, bus, em: performance.now() });
     if (!c || !buf) return false;
     const src = c.createBufferSource();
     src.buffer = buf;
@@ -578,7 +587,8 @@ class Motor {
     const vars = this.variantes(`sfx/${nome}`);
     if (vars.length) {
       const k = vars[Math.floor(Math.random() * vars.length)];
-      if (this.tocarArquivo(k, 1, bus)) return;
+      if (this.tocarArquivo(k, 1, bus, 0, true)) return;
+      if (!SONS[nome]) return;
     }
     const t = c.currentTime;
     const som = SONS[nome];

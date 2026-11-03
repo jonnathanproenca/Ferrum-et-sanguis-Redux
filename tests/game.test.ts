@@ -18,7 +18,6 @@ import {
   comprarMestre,
   gameOver,
   podeGastarEnergia,
-  filaLanistas,
   lanistaDaCasa,
   aplicarLiberdade,
   pularLuta,
@@ -29,7 +28,8 @@ import {
   multiplicadorArena,
   batalhasDoLudus,
   lutarArena,
-  escolherLanista,
+  sequenciaCampanha,
+  FINAIS,
   lutarCampanha,
   MAX_GLADIADORES,
   novoJogo,
@@ -80,38 +80,30 @@ describe('partida nova', () => {
     expect(e.gladiadores).toHaveLength(1);
   });
 
-  it('a campanha oferece 3 lanistas (sem a casa) e só define o desafio após a escolha', () => {
+  it('cada lanista tem sua própria sequência fixa, terminando em Batiatus e Espártaco', () => {
+    const seqs = LANISTAS.map((l) => sequenciaCampanha(l.id).map((x) => x.id).join('>'));
+    expect(new Set(seqs).size).toBe(LANISTAS.length);
+    for (const l of LANISTAS) {
+      const seq = sequenciaCampanha(l.id);
+      expect(seq).toHaveLength(PASSOS.length);
+      expect(seq.some((x) => x.id === l.id)).toBe(false);
+      expect(seq.slice(-2).map((x) => x.id)).toEqual(['batiatus', 'espartaco']);
+      expect(sequenciaCampanha(l.id).map((x) => x.id)).toEqual(seq.map((x) => x.id));
+    }
+    expect(FINAIS.map((x) => x.id)).toEqual(['batiatus', 'espartaco']);
+  });
+
+  it('o desafio vem da sequência, sem escolha, e o cheat ignora os requisitos', () => {
     const e = novoJogo(777);
-    const fila = filaLanistas(e);
-    expect(fila).toHaveLength(PASSOS.length);
-    const d0 = proximoDesafio(e)!;
-    expect(d0.lanista).toBeNull();
-    expect(d0.opcoes).toHaveLength(3);
-    expect(d0.opcoes.every((l) => l.id !== e.casaId)).toBe(true);
-    escolherLanista(e, d0.opcoes[1].id);
     const d = proximoDesafio(e)!;
-    expect(d.lanista?.id).toBe(d0.opcoes[1].id);
+    expect(d.lanista.id).toBe(sequenciaCampanha(e.casaId)[0].id);
     expect(d.requisitos).toHaveLength(PASSOS[0].requisitos.length);
-  });
-
-  it('escolher um lanista fora das opções é recusado', () => {
-    const e = novoJogo(777);
-    expect(() => escolherLanista(e, e.casaId)).toThrow(/não está entre/);
-  });
-
-  it('vencer o passo tira o lanista derrotado das próximas opções', () => {
-    const e = novoJogo(777);
-    const d0 = proximoDesafio(e)!;
-    escolherLanista(e, d0.opcoes[0].id);
-    e.campanha = 0;
-    e.derrotados = [];
-    const pool = proximoDesafio(e)!.opcoes.map((l) => l.id);
-    expect(pool).toContain(d0.opcoes[0].id);
-    e.derrotados = [d0.opcoes[0].id];
-    e.escolhaLanista = null;
-    e.opcoesLanista = undefined;
-    const novas = proximoDesafio(e)!.opcoes.map((l) => l.id);
-    expect(novas).not.toContain(d0.opcoes[0].id);
+    expect(d.pronto).toBe(false);
+    e.cheats = { campanha: true };
+    expect(proximoDesafio(e)!.pronto).toBe(true);
+    e.campanha = PASSOS.length - 1;
+    expect(proximoDesafio(e)!.lanista.id).toBe('espartaco');
+    expect(proximoDesafio(e)!.pronto).toBe(true);
   });
 
   it('cada origem tem 8 ou mais terras, com 4 aparências', () => {
@@ -411,7 +403,6 @@ describe('equipes e rendição', () => {
     const campeao = campeaoDe(e);
     const extra = { ...campeao, id: 'extra-x', campeao: false };
     e.gladiadores.push(extra);
-    escolherLanista(e, proximoDesafio(e)!.opcoes[0].id);
     expect(() => lutarCampanha(e, [campeao.id, extra.id])).toThrow(/1 contra 1/);
   });
 

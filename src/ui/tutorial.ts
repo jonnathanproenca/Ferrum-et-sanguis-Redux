@@ -63,7 +63,7 @@ export const TOPICOS: Topico[] = [
     titulo: 'Campanha',
     aba: 'campanha',
     paginas: () => [
-      { titulo: 'Os lanistas rivais', texto: 'A campanha tem 9 passos. Em cada um você escolhe, entre três lanistas, qual enfrentar. Cada passo tem uma regra própria e requisitos, como vitórias na arena ou um gladiador equipado.' },
+      { titulo: 'Os lanistas rivais', texto: 'A campanha tem 9 passos, sempre numa sequência fixa de rivais própria da sua casa. Os silhuetas ainda não foram revelados; os vencidos ficam riscados. Batiatus é o penúltimo e Espártaco o último. Cada passo tem uma regra própria e requisitos, como vitórias na arena ou um gladiador equipado.' },
       { titulo: 'Até a morte', texto: 'Nas lutas da campanha ninguém se rende: vai até a morte. Alguns passos são 2×2. Prepare seu time antes de entrar na arena.' },
     ],
   },
@@ -71,26 +71,26 @@ export const TOPICOS: Topico[] = [
     id: 'treino',
     titulo: 'Palus: treinamento',
     requer: 'palus',
-    paginas: () => [
+    paginas: () => comAba('ludus', [
       { titulo: 'Treinar gladiadores', texto: 'Com o palus pronto, cada card de gladiador ganha botões de treino. Treinar custa 1 de energia e 20 de ouro, soma +1 no atributo escolhido (máximo 10 por atributo) e dá experiência. Escravos recém-comprados treinam mesmo sem estilo.' },
-    ],
+    ]),
   },
   {
     id: 'armeiro',
     titulo: 'Armaria e armeiro',
     requer: 'armaria',
-    paginas: () => [
+    paginas: () => comAba('armeiro', [
       { titulo: 'Peças especiais', texto: 'O armeiro mestre oferece 5 peças por rodada, todas melhores que as básicas. As chances de qualidade: Superior 60%, Rara 25%, Épica 11% e Lendária 4%. Cada rodada tem no máximo 3 verdes, 2 azuis, 2 roxas e 1 laranja.' },
       { titulo: 'Equipar', texto: 'Comprada a peça, ela vai para o armeiro. Abra o card do gladiador e escolha a peça em cada espaço: arma, elmo, peito, acessório, perna e pé. Cada peça serve a certos estilos. As básicas já vêm com o estilo.' },
-    ],
+    ]),
   },
   {
     id: 'enfermaria',
     titulo: 'Enfermaria',
     requer: 'enfermaria',
-    paginas: () => [
+    paginas: () => comAba('enfermaria', [
       { titulo: 'Tratar os feridos', texto: 'O médico trata os efeitos persistentes que o Poço deixa. Tratar custa 1 de energia e 30 de ouro por ponto de severidade, e remove todos os efeitos do gladiador. Sem tratamento, os efeitos continuam reduzindo os atributos.' },
-    ],
+    ]),
   },
   {
     id: 'alojamentos',

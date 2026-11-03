@@ -33,7 +33,6 @@ import {
   MAX_GLADIADORES,
   novoJogo,
   PASSOS,
-  escolherLanista,
   proximoDesafio,
   recrutar,
   temMelhoria,
@@ -282,7 +281,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
             g.vivo && g.origem === 'escravo'
               ? `<button class="btn" data-acao="vender" data-id="${g.id}">Vender · ${Math.max(20, Math.round((precoGladiador(g) * regrasDe(s).precos) / 2))} ouro</button>`
               : ''
-          }<button class="btn" data-acao="dispensar" data-id="${g.id}">Dispensar</button></div>`;
+          }${morto ? `<button class="btn" data-acao="dispensar" data-id="${g.id}">Enterrar</button>` : ''}</div>`;
 
     const chaveDetalhes = `eq-${g.id}`;
     return `<article id="g-${g.id}" class="card ${morto ? 'morto' : ''} ${g.campeao ? 'campeao' : ''}">
@@ -707,25 +706,23 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     const sel = equipeValida(s);
     const trilha = `<ol class="camp-trilha">${PASSOS.map((p, i) =>
       `<li class="${i < d.indice ? 'feito' : i === d.indice ? 'atual' : ''}" title="${esc(p.titulo)}"><b>${i < d.indice ? '✓' : i + 1}</b></li>`).join('')}</ol>`;
-    const n = d.opcoes.length;
-    const figuras = d.opcoes
+    const n = d.sequencia.length;
+    const figuras = d.sequencia
       .map((l, i) => {
         const sp = SPRITES_LANISTA[l.id];
-        const largura = ((sp.w * 1.7) / 1376) * 100;
-        const centro = n === 1 ? 50 : 20 + (60 / (n - 1)) * i;
-        const ativo = d.lanista?.id === l.id;
-        return `<button class="lanista-sel camp-fig ${ativo ? 'ativo' : d.lanista ? 'apagado' : ''}" data-acao="escolher-lanista" data-id="${l.id}" aria-pressed="${ativo}"
-          style="left:${(centro - largura / 2).toFixed(2)}%;width:${largura.toFixed(2)}%;z-index:${ativo ? 20 : 10}">
-          <img src="${sp.arquivo}" alt="${esc(l.nome)}" draggable="false">
-          <span class="camp-nome">${esc(l.nome)}<small>${esc(CLASSES[l.especialidade].nome)}</small></span></button>`;
+        const largura = ((sp.w * 0.98) / 1376) * 100;
+        const centro = 8 + (84 / (n - 1)) * i;
+        const estado = i < d.indice ? 'vencido' : i === d.indice ? 'ativo' : 'futuro';
+        return `<div class="lanista-sel camp-fig ${estado}" style="left:${(centro - largura / 2).toFixed(2)}%;width:${largura.toFixed(2)}%;z-index:${estado === 'ativo' ? 20 : 10 - Math.abs(i - d.indice)}">
+          <img src="${sp.arquivo}" alt="${estado === 'futuro' ? 'Rival ainda desconhecido' : esc(l.nome)}" draggable="false">
+          <span class="camp-num">${i + 1}</span></div>`;
       })
       .join('');
     const palco = `<div class="sel-palco camp-palco" style="background-image:url('${FUNDO_LANISTAS}')">
-      <div class="sel-info"><h2>${d.lanista ? `Desafio aceito: ${esc(d.lanista.nome)}` : 'Escolha quem enfrentar'}</h2>
-      <p>${d.lanista ? 'Toque em outro lanista para mudar de ideia.' : 'Cada vitória aproxima o seu ludus da glória.'}</p></div>
+      <div class="sel-info"><h2>${esc(d.lanista.nome)}</h2>
+      <p>${esc(d.lanista.titulo ?? `Escola de ${CLASSES[d.lanista.especialidade].nome}`)}</p></div>
       ${figuras}</div>`;
     const cabeca = `<header class="camp-cabeca"><small>Passo ${d.indice + 1} de ${PASSOS.length}</small><h2>${esc(d.passo.titulo)}</h2></header>`;
-    if (!d.lanista) return `<section class="camp">${cabeca}${trilha}${palco}</section>`;
     const rival = s.campeoesRivais[d.lanista.id];
     const pronto = d.pronto && sel.length === formato && s.energia >= formato;
     const status = sel.length !== formato ? `Escale ${formato} gladiador${formato > 1 ? 'es' : ''}.`
@@ -1185,10 +1182,6 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     if (alvo.dataset.acao === 'aba') {
       portaoAberto = false;
       painelLudus = null;
-    }
-    if (alvo.dataset.acao === 'escolher-lanista') {
-      const id = alvo.dataset.id ?? '';
-      return agir((st) => escolherLanista(st, id));
     }
     if (alvo.dataset.acao === 'limpar-escalacao') {
       equipe = [];
