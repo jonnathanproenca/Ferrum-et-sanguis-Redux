@@ -1,6 +1,7 @@
 import { nomeAparencia } from '../art/gladiador';
 import { iconeItem } from '../art/icones';
 import { FORJA } from '../art/armeiro';
+import { ESCRITORIO } from '../art/engenheiro';
 import { SPRITES_CLASSE } from '../art/sprites';
 import { varianteDe } from '../art/variantes';
 import { pixelarImagens, colorirSprites } from '../art/pixel';
@@ -412,6 +413,18 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     </div></div>`;
   }
 
+  /** Escritório do engenheiro: fundo estático, engenheiro respirando e brilho da lamparina. */
+  function escritorio(): string {
+    const pc = (v: number, total: number): string => `${((v / total) * 100).toFixed(3)}%`;
+    const e = ESCRITORIO.engenheiro;
+    const l = ESCRITORIO.lamparina;
+    return `<div class="forja escritorio" role="img" aria-label="Engenheiro romano examinando um projeto">
+      <img class="forja-fundo" src="${ESCRITORIO.fundo}" alt="" draggable="false">
+      <div class="forja-brilho" style="left:${pc(l.x - l.r, ESCRITORIO.w)};top:${pc(l.y - l.r, ESCRITORIO.h)};width:${pc(l.r * 2, ESCRITORIO.w)};aspect-ratio:1"></div>
+      <img class="forja-ferreiro" src="${e.arquivo}" alt="" draggable="false" style="left:${pc(e.x, ESCRITORIO.w)};top:${pc(e.y, ESCRITORIO.h)};width:${pc(e.w, ESCRITORIO.w)};aspect-ratio:${e.w}/${e.h}">
+    </div>`;
+  }
+
   /** Menu Upgrades: onde se compram as seções do ludus. */
   function upgrades(s: Estado): string {
     const ordem: MelhoriaId[] = ['palus', 'armaria', 'alojamentos', 'refeitorio', 'enfermaria'];
@@ -430,7 +443,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         </article>`;
       })
       .join('');
-    return `<p class="meta">Cada upgrade transforma o ludus. Ao comprar, você volta à cena para ver a obra.</p><div class="grade">${cards}</div>`;
+    return `${escritorio()}<p class="meta">Cada upgrade transforma o ludus. Ao comprar, você volta à cena para ver a obra.</p><div class="grade">${cards}</div>`;
   }
 
   function ludus(s: Estado): string {
