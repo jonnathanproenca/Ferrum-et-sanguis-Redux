@@ -6,9 +6,22 @@ export const MERCADO = {
   fundo: 'assets/mercado/fundo.jpg',
   mercador: { arquivo: 'assets/mercado/mercador.webp', x: 428, y: 287, w: 264, h: 305 },
 };
-/** Sprites dos escravos sem estilo (3 aparências; a escolha vem do `look` do gladiador). */
-export const SPRITES_ESCRAVO = [
-  'assets/gladiadores/escravo/escravo-0.png',
-  'assets/gladiadores/escravo/escravo-1.png',
-  'assets/gladiadores/escravo/escravo-2.png',
-];
+/**
+ * Sprites dos escravos sem estilo, por terra de origem. Cada terra pode ter várias aparências
+ * (o `look` do gladiador escolhe uma); basta acrescentar arquivos à lista.
+ */
+export const SPRITES_ESCRAVO: Record<string, string[]> = {
+  galia: ['assets/gladiadores/escravo/galia.png'],
+  germania: ['assets/gladiadores/escravo/germania.png'],
+  tracia: ['assets/gladiadores/escravo/tracia.png'],
+  dacia: ['assets/gladiadores/escravo/dacia.png'],
+  numidia: ['assets/gladiadores/escravo/numidia.png'],
+  hispania: ['assets/gladiadores/escravo/hispania.png'],
+  siria: ['assets/gladiadores/escravo/siria.png'],
+  britania: ['assets/gladiadores/escravo/britania.png'],
+};
+
+export function spriteEscravo(terra: string, look: number): string {
+  const lista = SPRITES_ESCRAVO[terra] ?? SPRITES_ESCRAVO.galia;
+  return lista[look % lista.length];
+}

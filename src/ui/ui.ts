@@ -3,7 +3,7 @@ import { iconeItem } from '../art/icones';
 import { FORJA } from '../art/armeiro';
 import { ESCRITORIO } from '../art/engenheiro';
 import { ENFERMARIA } from '../art/enfermaria';
-import { MERCADO, SPRITES_ESCRAVO } from '../art/mercado';
+import { MERCADO, spriteEscravo } from '../art/mercado';
 import { SPRITES_CLASSE } from '../art/sprites';
 import { varianteDe } from '../art/variantes';
 import { pixelarImagens, colorirSprites } from '../art/pixel';
@@ -177,7 +177,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
 
   /** Gladiador com a mesma sprite da arena (pose de guarda), na cor do seu id e com moldura da melhor peça. */
   function gladiadorImg(g: Gladiador): string {
-    if (g.semEstilo) return `<img class="gladiador-img sprite-card sprite-escravo" src="${SPRITES_ESCRAVO[g.look % SPRITES_ESCRAVO.length]}" alt="" draggable="false">`;
+    if (g.semEstilo) return `<img class="gladiador-img sprite-card sprite-escravo" src="${spriteEscravo(g.terra, g.look)}" alt="" draggable="false">`;
     const q = Math.max(0, ...SLOTS.map((sl) => qualidadeDe(g.equipamento[sl])));
     const cor = q > 0 ? COR_QUALIDADE[q] : 'transparent';
     const set = SPRITES_CLASSE[g.classe];
