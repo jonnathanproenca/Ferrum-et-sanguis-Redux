@@ -201,6 +201,10 @@ export const TENDENCIA_PONTOS = 2;
 const NOMES = [
   'Ático', 'Brenno', 'Cássio', 'Dárdano', 'Espúrio', 'Flávio', 'Gracco', 'Hélvio', 'Ícaro', 'Juba',
   'Lúcio', 'Márcio', 'Nério', 'Otávio', 'Pacato', 'Rúfio', 'Sabino', 'Túlio', 'Vário', 'Xantipo',
+  'Aulo', 'Balbo', 'Cneu', 'Décimo', 'Eumeno', 'Fábio', 'Galba', 'Hirto', 'Ibero', 'Jano',
+  'Lêntulo', 'Mânio', 'Numério', 'Ósio', 'Pláucio', 'Quinto', 'Rômulo', 'Sérvio', 'Tibério', 'Úlpio',
+  'Valente', 'Zenão', 'Amílcar', 'Bóio', 'Crixo', 'Doro', 'Enômao', 'Fúrio', 'Górgias', 'Heitor',
+  'Ixíon', 'Jugurta', 'Lisandro', 'Mário', 'Nicandro', 'Orgétorix', 'Perseu', 'Rufo', 'Sertório', 'Tárcio',
 ];
 
 function equipamentoVazio(): Equipamento {
