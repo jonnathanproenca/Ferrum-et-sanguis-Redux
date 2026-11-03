@@ -424,6 +424,7 @@ class Motor {
     }
     if (!this.pedida) return;
     const cfg = CENAS[this.pedida];
+    for (const k of [...(cfg.npc ? this.variantes(`voz/${cfg.npc}`) : []), ...(cfg.bigorna ? this.variantes('cena/bigorna') : [])]) this.obter(k);
     const nos: CenaAtiva['nos'] = [];
     const amb = cfg.ambiente;
     if (amb) {
@@ -508,7 +509,8 @@ class Motor {
     const vars = this.variantes(`voz/${npc}`);
     if (vars.length && !ajuste) {
       const k = vars[Math.floor(Math.random() * vars.length)];
-      if (this.tocarArquivo(k, 1, bus)) return;
+      this.tocarArquivo(k, 1, bus);
+      return; // com arquivo, nunca cai na voz sintética (se ainda carrega, fica em silêncio)
     }
     const v = { ...VOZES[npc], ...ajuste };
     const n = v.silabas[0] + Math.floor(Math.random() * (v.silabas[1] - v.silabas[0] + 1));
