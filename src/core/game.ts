@@ -366,7 +366,24 @@ export function gerarMercado(e: Estado): void {
   for (let i = 0; i < 5; i++) e.mercado.push(gerarEscravo(rng, novoId(e)));
 }
 
-/** Sorteia as 3 ofertas do armeiro mestre (peças especiais de qualidade superior ou melhor). */
+/** Chance de cada qualidade nas ofertas do armeiro mestre: Superior (verde) comum, Rara (azul), Épica (roxo), Lendária (laranja) rara. */
+export const CHANCE_MESTRE: { qualidade: number; chance: number }[] = [
+  { qualidade: 1, chance: 0.6 },
+  { qualidade: 2, chance: 0.25 },
+  { qualidade: 3, chance: 0.11 },
+  { qualidade: 4, chance: 0.04 },
+];
+
+export function sortearQualidadeMestre(r: number): number {
+  let acc = 0;
+  for (const { qualidade, chance } of CHANCE_MESTRE) {
+    acc += chance;
+    if (r < acc) return qualidade;
+  }
+  return CHANCE_MESTRE[0].qualidade;
+}
+
+/** Sorteia as 3 ofertas do armeiro mestre (só peças especiais, de qualidade superior ou melhor, por chance decrescente). */
 export function gerarArmeiroMestre(e: Estado): void {
   const rng = proximoRng(e);
   const pool = ITENS.filter((i) => !i.basico).map((i) => i.id);
@@ -374,8 +391,7 @@ export function gerarArmeiroMestre(e: Estado): void {
   while (oferta.length < 3) {
     const base = pool[rng.int(0, pool.length - 1)];
     if (oferta.some((o) => separarId(o).base === base)) continue;
-    const r = rng.next();
-    oferta.push(comQualidade(base, r < 0.45 ? 1 : r < 0.75 ? 2 : r < 0.92 ? 3 : 4));
+    oferta.push(comQualidade(base, sortearQualidadeMestre(rng.next())));
   }
   e.armeiroMestre = oferta;
 }

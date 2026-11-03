@@ -586,23 +586,12 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         </article>`;
       })
       .join('');
-    const basicos = CLASSES_IDS.map((classe) => {
-      const linhas = SLOTS.map((slot) => {
-        const item = itemPorId(`basico_${slot}_${classe}`);
-        return `<button class="btn basico" data-acao="comprar" data-valor="${item.id}" ${s.ouro < item.preco ? 'disabled' : ''} title="${esc(fmtItem(item))}">
-          ${iconeItem(item, 30)}<span>${esc(item.nome)}</span><b>${item.preco}</b></button>`;
-      }).join('');
-      return `<div class="basicos-classe"><h5>${esc(CLASSES[classe].nome)}</h5><div class="basicos-lista">${linhas}</div></div>`;
-    }).join('');
-
     return `${forja()}
       <h4 class="secao">Armeiro mestre</h4>
-      <p class="meta">Três peças especiais, sorteadas a cada rodada. Qualidade maior = mais bônus.</p>
+      <p class="meta">Três peças especiais, sorteadas a cada rodada. Todo gladiador já recebe o kit básico ao escolher o estilo, então aqui só há peças melhores. Chances: <span style="color:${COR_QUALIDADE[1]}">Superior 60%</span> · <span style="color:${COR_QUALIDADE[2]}">Rara 25%</span> · <span style="color:${COR_QUALIDADE[3]}">Épica 11%</span> · <span style="color:${COR_QUALIDADE[4]}">Lendária 4%</span>.</p>
       <div class="grade">${mestre || '<p class="meta">Tudo vendido. Novas peças na próxima rodada.</p>'}</div>
       <h4 class="secao">No armeiro</h4>
-      <ul class="registro">${guardados || '<li class="meta">Nenhum item guardado.</li>'}</ul>
-      <h4 class="secao">Itens básicos (sem bônus)</h4>
-      <div class="basicos">${basicos}</div>`;
+      <ul class="registro">${guardados || '<li class="meta">Nenhum item guardado.</li>'}</ul>`;
   }
 
   /** Escalação: faixa de cards dos gladiadores vivos; o toque põe/tira da equipe, na ordem do toque. */

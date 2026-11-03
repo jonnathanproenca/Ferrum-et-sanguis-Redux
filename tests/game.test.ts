@@ -31,6 +31,8 @@ import {
   recrutar,
   escolherEstilo,
   gerarMercado,
+  sortearQualidadeMestre,
+  gerarArmeiroMestre,
   temMelhoria,
   tratar,
   treinar,
@@ -653,5 +655,31 @@ describe('mercado de escravos', () => {
     const e = novoJogo(10);
     gerarMercado(e);
     expect(e.mercado.every((g) => g.semEstilo && g.origem === 'escravo')).toBe(true);
+  });
+});
+
+describe('armeiro mestre: chance por qualidade', () => {
+  it('verde é o mais comum e laranja o mais raro, e nunca sai básico', () => {
+    const cont = [0, 0, 0, 0, 0];
+    for (let i = 0; i < 10000; i++) cont[sortearQualidadeMestre(i / 10000)]++;
+    expect(cont[0]).toBe(0);
+    expect(cont[1]).toBeGreaterThan(cont[2]);
+    expect(cont[2]).toBeGreaterThan(cont[3]);
+    expect(cont[3]).toBeGreaterThan(cont[4]);
+    expect(cont[4]).toBeGreaterThan(0);
+  });
+
+  it('as 3 ofertas são peças especiais, de qualidade 1 a 4', () => {
+    const e = novoJogo(11);
+    for (let i = 0; i < 30; i++) {
+      gerarArmeiroMestre(e);
+      expect(e.armeiroMestre).toHaveLength(3);
+      for (const id of e.armeiroMestre as string[]) {
+        const item = itemPorId(id);
+        expect(item.basico).toBeFalsy();
+        expect(item.qualidade).toBeGreaterThanOrEqual(1);
+        expect(item.qualidade).toBeLessThanOrEqual(4);
+      }
+    }
   });
 });
