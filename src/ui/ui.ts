@@ -29,6 +29,7 @@ import {
   lutarArena,
   lutarCampanha,
   desistirDaLuta,
+  pularLuta,
   MAX_GLADIADORES,
   novoJogo,
   PASSOS,
@@ -44,7 +45,12 @@ import {
   dispensarGladiador,
   arenaLiberada,
   multiplicadorArena,
-  limiarLiberdade,
+  regrasDe,
+  precoItem,
+  REGRAS,
+  DIFICULDADES_ORDEM,
+  custoMelhoria,
+  type Dificuldade,
   type Arena,
   type Estado,
   type MelhoriaId,
@@ -145,7 +151,7 @@ function nomeOrigem(g: Gladiador): string {
  * o estado da partida vive em `e` e é salvo após cada ação.
  */
 export function montarUi(raiz: HTMLElement, opcoes: {
-  iniciarArena(payload: PayloadLuta, onFim: () => void, onDesistir?: () => void): void;
+  iniciarArena(payload: PayloadLuta, onFim: () => void, onDesistir?: () => void, onPular?: () => number): void;
 }): void {
   new MutationObserver(() => { pixelarImagens(raiz); colorirSprites(raiz); }).observe(raiz, { childList: true, subtree: true });
   let e: Estado | null = null;
@@ -250,10 +256,10 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     const venda = g.campeao
       ? '<p class="meta">O campeão não é vendido nem dispensado.</p>'
       : g.lenda
-        ? `<p class="meta">Lenda: só deixa o ludus pela liberdade, com ${limiarLiberdade(s.config)} vitórias.</p>`
+        ? `<p class="meta">${regrasDe(s).liberdade === null ? 'Lenda: nunca deixa o ludus.' : `Lenda: é libertado após ${regrasDe(s).liberdade} lutas como lenda (${g.lutasComoLenda ?? 0} feitas).`}</p>`
         : `<div class="linha">${
             g.vivo && g.origem === 'escravo'
-              ? `<button class="btn" data-acao="vender" data-id="${g.id}">Vender · ${Math.max(20, Math.round(precoGladiador(g) / 2))} ouro</button>`
+              ? `<button class="btn" data-acao="vender" data-id="${g.id}">Vender · ${Math.max(20, Math.round((precoGladiador(g) * regrasDe(s).precos) / 2))} ouro</button>`
               : ''
           }<button class="btn" data-acao="dispensar" data-id="${g.id}">Dispensar</button></div>`;
 
@@ -458,10 +464,11 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       .map((id) => {
         const m = melhoriaPorId(id);
         const feita = temMelhoria(s, id);
-        const falta = m.custo - s.ouro;
+        const custo = custoMelhoria(s, id);
+        const falta = custo - s.ouro;
         const acao = feita
           ? '<span class="construida-selo">Construído</span>'
-          : `<button class="btn primario" data-acao="construir" data-valor="${id}" ${falta > 0 ? 'disabled' : ''}>Construir · ${m.custo} ouro</button>${falta > 0 ? `<p class="meta">Faltam ${falta} de ouro.</p>` : ''}`;
+          : `<button class="btn primario" data-acao="construir" data-valor="${id}" ${falta > 0 ? 'disabled' : ''}>Construir · ${custo} ouro</button>${falta > 0 ? `<p class="meta">Faltam ${falta} de ouro.</p>` : ''}`;
         return `<article class="card upgrade ${feita ? 'feito' : ''}">
           <h3>${esc(m.nome)}</h3>
           <p class="meta">${esc(m.efeito)}</p>
@@ -585,8 +592,8 @@ export function montarUi(raiz: HTMLElement, opcoes: {
           <h3 style="color:${COR_QUALIDADE[item.qualidade]}">${esc(item.nome)} <small>${QUALIDADES[item.qualidade]}</small></h3>
           <p class="meta">${NOME_SLOT[item.slot]} · Serve: ${esc(serve)}</p>
           <p class="stats">${esc(fmtBonus(item.bonus))}</p>
-          <button class="btn primario" data-acao="comprar-mestre" data-valor="${item.id}" ${s.ouro < item.preco ? 'disabled' : ''}>
-            Comprar · ${item.preco} ouro
+          <button class="btn primario" data-acao="comprar-mestre" data-valor="${item.id}" ${s.ouro < precoItem(s, item) ? 'disabled' : ''}>
+            Comprar · ${precoItem(s, item)} ouro
           </button>
         </article>`;
       })
@@ -653,13 +660,13 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         })
         .join('');
       const status = !fama.liberada ? `Fechada: só abre com ${a.batalhasMin} batalhas disputadas (faltam ${fama.faltam}).` : sel.length === 0 ? 'Escale os gladiadores acima.' : erros[0] ?? '';
-      const dif = Math.round((multiplicadorArena(a) - 1) * 100);
+      const dif = Math.round((multiplicadorArena(a, s.config?.dificuldade) - 1) * 100);
       return `<article class="card arena ${fama.liberada ? '' : 'fechada'}">
         <div class="arte"><img class="arte-img" src="${a.arte.replace('.png', '-mini.png')}" width="480" height="270" alt=""></div>
         <h3>${esc(a.nome)}</h3>
         <p class="meta">${a.honra ? `Plateia ${esc(a.plateia)}` : 'Plateia sorteada a cada luta'} · ${a.honra ? 'Arena de honra' : 'Poço: golpes causam efeitos persistentes'}</p>
         <p class="meta">Rendição: quem cai abaixo de 25% se rende.</p>
-        <p class="meta">Rivais ${dif > 0 ? `+${dif}% mais fortes` : 'no nível base'}</p>
+        <p class="meta">Rivais ${dif > 0 ? `+${dif}% mais fortes` : dif < 0 ? `${-dif}% mais fracos` : 'no nível base'}</p>
         ${efeitos}
         <p class="meta">Recompensa ${a.recompensaOuro[0] === a.recompensaOuro[1] ? `${a.recompensaOuro[0]} ouro + bônus da lotação (10%, 20% ou 30%)` : `${a.recompensaOuro[0]}–${a.recompensaOuro[1]} ouro`}</p>
         ${status ? `<p class="aviso">${esc(status)}</p>` : ''}
@@ -730,7 +737,6 @@ export function montarUi(raiz: HTMLElement, opcoes: {
     return `<p class="meta">Libertos nesta partida: ${s.libertados.length} · Lendas no ludus: ${lendas}</p>
       <h4 class="secao">Som</h4>
       <div class="linha">
-        <label class="campo"><span><input type="checkbox" data-audio="ativo" ${p.ativo ? 'checked' : ''}> Som ligado</span></label>
         <label class="campo">Música
           <input type="range" min="0" max="1" step="0.05" value="${p.musica}" data-audio="musica"></label>
         <label class="campo">Efeitos
@@ -757,13 +763,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
   }
 
   /** Tela de escolha do lanista (nome, história, especialidade e bônus) ao começar um novo ludus. */
-  const regras = { campeao: 3, lenda: 6 };
-  function lerRegras(): void {
-    for (const k of ['campeao', 'lenda'] as const) {
-      const v = Number(raiz.querySelector<HTMLInputElement>(`input[data-regra="${k}"]`)?.value);
-      if (Number.isFinite(v) && v >= 1) regras[k] = Math.min(30, Math.round(v));
-    }
-  }
+  let dificuldadeSel: Dificuldade = 'medio';
 
   function selecaoLanista(): string {
     const sel = LANISTAS.find((l) => l.id === lanistaSel) ?? null;
@@ -790,9 +790,8 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       </div>
       <div class="sel-info sel-info-m">${info}</div>
       <div class="sel-regras">
-        <label class="campo">Campeão com <input type="number" min="1" max="30" value="${regras.campeao}" data-regra="campeao"> vitórias</label>
-        <label class="campo">Lenda com <input type="number" min="1" max="30" value="${regras.lenda}" data-regra="lenda"> vitórias</label>
-        <p class="meta">Liberdade: ${regras.lenda * 3} vitórias (3× a lenda). Estas regras valem para a partida inteira e não mudam depois.</p>
+        <div class="dificuldades">${DIFICULDADES_ORDEM.map((d) => `<button class="btn ${d === dificuldadeSel ? 'primario' : ''}" data-acao="dificuldade" data-valor="${d}" aria-pressed="${d === dificuldadeSel}">${REGRAS[d].nome}</button>`).join('')}</div>
+        <p class="meta"><strong>${REGRAS[dificuldadeSel].nome}:</strong> ${REGRAS[dificuldadeSel].resumo} A dificuldade vale para a partida inteira e não muda depois.</p>
       </div>
       <div class="sel-acoes">
         <button class="btn" data-acao="voltar-menu">Voltar</button>
@@ -831,6 +830,7 @@ export function montarUi(raiz: HTMLElement, opcoes: {
       <span>Turno ${s.turno}</span>
       <span>Vitórias ${s.vitoriasTotais}</span>
       <button class="btn ${podeGastarEnergia(s) ? 'pendente' : ''}" data-acao="turno" title="${podeGastarEnergia(s) ? 'Gaste toda a energia antes' : ''}">Próximo turno</button>
+      <button class="btn" data-acao="mutar" title="${audio.prefs().ativo ? 'Silenciar' : 'Ligar o som'}" aria-label="${audio.prefs().ativo ? 'Silenciar' : 'Ligar o som'}">${audio.prefs().ativo ? '🔊' : '🔇'}</button>
       <button class="btn" data-acao="menu">Menu</button>
     </header>`;
     const abas = `<nav class="abas">${ABAS.map(
@@ -896,6 +896,11 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         if (!e) return;
         e = desistirDaLuta(antes, e, ids);
         salvar(e);
+      }, () => {
+        if (!e) return 0;
+        const perda = pularLuta(e, payload);
+        salvar(e);
+        return perda;
       });
     } catch (err) {
       aviso = err instanceof Error ? err.message : 'Luta indisponível.';
@@ -915,6 +920,11 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         if (!e) return;
         e = desistirDaLuta(antes, e, ids);
         salvar(e);
+      }, () => {
+        if (!e) return 0;
+        const perda = pularLuta(e, payload);
+        salvar(e);
+        return perda;
       });
     } catch (err) {
       aviso = err instanceof Error ? err.message : 'Luta indisponível.';
@@ -935,8 +945,15 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         lanistaSel = null;
         render();
         return;
+      case 'mutar':
+        audio.definirPrefs({ ativo: !audio.prefs().ativo });
+        render();
+        return;
+      case 'dificuldade':
+        dificuldadeSel = valor as Dificuldade;
+        render();
+        return;
       case 'marcar-lanista':
-        lerRegras();
         lanistaSel = id;
         render();
         return;
@@ -946,9 +963,8 @@ export function montarUi(raiz: HTMLElement, opcoes: {
         return;
       case 'confirmar-lanista':
         if (!lanistaSel) return;
-        lerRegras();
         escolhendo = false;
-        e = novoJogo(undefined, lanistaSel, { vitoriasCampeao: regras.campeao, vitoriasLenda: regras.lenda });
+        e = novoJogo(undefined, lanistaSel, { dificuldade: dificuldadeSel });
         menuAberto = false;
         aba = 'ludus';
         equipe = [];

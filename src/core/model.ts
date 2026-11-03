@@ -176,6 +176,8 @@ export interface Gladiador {
   pocoOnly: boolean;
   vitorias: number;
   vitoriasPoco: number;
+  /** Lutas disputadas depois de virar lenda (contam para a liberdade em Difícil e Extremo). */
+  lutasComoLenda?: number;
   derrotas: number;
   efeitos: EfeitoPersistente[];
   /** Escravo recém-recrutado: ainda sem estilo, sem equipamento e fora das arenas até escolher um estilo. */

@@ -11,7 +11,7 @@ import type { Lutador } from './Lutador';
 import { SPRITES_CLASSE, chaveSprite, type Pose } from '../art/sprites';
 import { VARIANTES_COR, recolorir, varianteDe } from '../art/variantes';
 
-type Dados = PayloadLuta & { onFim: () => void; onDesistir?: () => void };
+type Dados = PayloadLuta & { onFim: () => void; onDesistir?: () => void; onPular?: () => number };
 
 /** Dados de um lutador que não são o corpo: barra de vida, posição e se tem escudo. */
 interface Ficha {
@@ -311,6 +311,22 @@ export class ArenaScene extends Phaser.Scene {
     fundo.on('pointerup', () => {
       if (this.fimMostrado || this.confirmando) return;
       this.confirmarDesistencia();
+    });
+    // Pular: vai direto ao resultado, com 10% a menos de ouro.
+    const pular = this.add
+      .rectangle(724, 28, 170, 34, 0x000000, 0.65)
+      .setStrokeStyle(2, 0xf2d28a)
+      .setDepth(50)
+      .setInteractive({ useHandCursor: true });
+    this.add.text(724, 28, 'Pular luta (−10%)', ESTILO(15, '#f2d28a')).setOrigin(0.5).setDepth(51);
+    pular.on('pointerup', () => {
+      const d = this.dados;
+      if (!d || this.fimMostrado || this.confirmando) return;
+      this.fimMostrado = true;
+      this.time.removeAllEvents();
+      this.tweens.killAll();
+      const perda = d.onPular?.() ?? 0;
+      this.painelFinal({ ...d, ouro: Math.max(0, d.ouro - perda), moedas: 0 });
     });
   }
 

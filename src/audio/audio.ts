@@ -95,13 +95,15 @@ const CENAS: Record<Cena, CenaCfg> = {
   forja: { ambiente: { chave: 'ambiente/fogo', vol: 0.3, sintese: 'fogo' }, bigorna: true },
   escritorio: { npc: 'engenheiro' },
   enfermaria: { npc: 'medico' },
-  mercado: { ambiente: { chave: 'ambiente/mercado', vol: 0.7, sintese: 'multidao' }, npc: 'mercador' },
+  mercado: { ambiente: { chave: 'ambiente/mercado', vol: 0.5, sintese: 'multidao' }, npc: 'mercador' },
 };
 
 interface CenaAtiva {
   cena: Cena;
   cfg: CenaCfg;
   nos: { ganho: GainNode; src: AudioBufferSourceNode }[];
+  /** O ambiente em loop já é o arquivo (e não o sintético de espera). */
+  ambArq: boolean;
   proxBigorna: number;
   proxVoz: number;
 }
@@ -405,7 +407,12 @@ class Motor {
     const c = this.ctx;
     const bus = this.efeitosBus;
     if (!c || !bus || c.state !== 'running') return;
-    const mesma = this.cenaAt?.cena === this.pedida;
+    const ambPronto = (cena: Cena | null): boolean => {
+      const chave = cena ? CENAS[cena].ambiente?.chave : undefined;
+      return !!chave && this.buffers.has(chave);
+    };
+    // Se o arquivo do ambiente terminou de carregar, troca o ruído de espera por ele.
+    const mesma = this.cenaAt?.cena === this.pedida && !(this.cenaAt && !this.cenaAt.ambArq && ambPronto(this.pedida));
     // A animação reinicia a cada redesenho da tela: realinha a bigorna com o quadro do martelo.
     if (mesma && this.cenaAt) {
       this.cenaAt.proxBigorna = c.currentTime + BIGORNA_IMPACTO;
@@ -433,7 +440,7 @@ class Motor {
       const g = c.createGain();
       if (buf) {
         src.buffer = buf;
-      } else if (this.ruido) {
+      } else if (this.ruido && amb.sintese === 'fogo') {
         src.buffer = this.ruido;
         const f = c.createBiquadFilter();
         f.type = amb.sintese === 'fogo' ? 'lowpass' : 'bandpass';
@@ -454,6 +461,7 @@ class Motor {
       cena: this.pedida,
       cfg,
       nos,
+      ambArq: !!amb && !!this.buffers.get(amb.chave),
       proxBigorna: c.currentTime + BIGORNA_IMPACTO,
       proxVoz: c.currentTime + 1.5 + Math.random() * 2,
     };

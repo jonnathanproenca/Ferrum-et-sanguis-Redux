@@ -20,7 +20,7 @@ const jogo = new Phaser.Game({
 });
 
 montarUi(raizUi, {
-  iniciarArena(payload, onFim, onDesistir) {
+  iniciarArena(payload, onFim, onDesistir, onPular) {
     raizUi.hidden = true;
     audio.tocarTrilha(payload.trilha);
     containerJogo.classList.add('ativo');
@@ -28,6 +28,7 @@ montarUi(raizUi, {
     jogo.scene.start('arena', {
       ...payload,
       onDesistir,
+      onPular,
       onFim: () => {
         containerJogo.classList.remove('ativo');
         raizUi.hidden = false;

@@ -20,7 +20,10 @@ import {
   podeGastarEnergia,
   filaLanistas,
   lanistaDaCasa,
-  limiarLiberdade,
+  aplicarLiberdade,
+  pularLuta,
+  precoItem,
+  REGRAS,
   arenaLiberada,
   arenaPorId,
   multiplicadorArena,
@@ -324,12 +327,13 @@ describe('venda, dispensa e marcos', () => {
     expect(() => dispensarGladiador(e, campeao.id)).toThrow(/lenda/);
   });
 
-  it('chegar ao limiar de liberdade tira o gladiador do ludus e conta como liberto', () => {
-    const e = novoJogo(63);
-    const g = { ...campeaoDe(e), id: 'livre-1', campeao: false, lenda: false, vitorias: 18 };
+  it('chegar ao limiar de liberdade (Difícil: 30 lutas como lenda) tira o lenda do ludus', () => {
+    const e = novoJogo(63, 'lanista-1', { dificuldade: 'dificil' });
+    const g = { ...campeaoDe(e), id: 'livre-1', campeao: false, lenda: true, lutasComoLenda: 29 };
     e.gladiadores.push(g);
-    const marcos = aplicarMarcos(e, g);
-    expect(marcos.join(' ')).toMatch(/liberdade/);
+    expect(aplicarLiberdade(e, g)).toHaveLength(0);
+    g.lutasComoLenda = 30;
+    expect(aplicarLiberdade(e, g).join(' ')).toMatch(/liberdade/);
     expect(e.gladiadores.some((x) => x.id === 'livre-1')).toBe(false);
     expect(e.libertados).toHaveLength(1);
   });
@@ -337,7 +341,7 @@ describe('venda, dispensa e marcos', () => {
   it('chegar ao limiar de lenda marca o gladiador, que ganha +1 em todos os atributos', () => {
     const e = novoJogo(64);
     const casa = lanistaDaCasa(e);
-    const g = { ...campeaoDe(e), id: 'lenda-1', campeao: false, lenda: false, vitorias: 6 };
+    const g = { ...campeaoDe(e), id: 'lenda-1', campeao: false, lenda: false, vitorias: REGRAS.medio.lenda };
     e.gladiadores.push(g);
     const antes = statsDoGladiador(g, casa.especialidade).forca;
     const marcos = aplicarMarcos(e, g);
@@ -346,13 +350,11 @@ describe('venda, dispensa e marcos', () => {
     expect(statsDoGladiador(g, casa.especialidade).forca).toBe(antes + 1);
   });
 
-  it('configuração recusa liberdade que não vem antes da lenda', () => {
+  it('a dificuldade vem do novo jogo; saves sem ela jogam no Médio; valor inválido é recusado', () => {
+    expect(novoJogo(65).config).toEqual({ dificuldade: 'medio' });
+    expect(novoJogo(65, 'lanista-1', { dificuldade: 'extremo' }).config).toEqual({ dificuldade: 'extremo' });
     const e = novoJogo(65);
-    expect(() => definirConfig(e, { vitoriasLenda: 0 })).toThrow(/Lenda/);
-    expect(() => definirConfig(e, { vitoriasLenda: 31 })).toThrow(/Lenda/);
-    definirConfig(e, { vitoriasLenda: 8 });
-    expect(e.config).toEqual({ vitoriasCampeao: 3, vitoriasLenda: 8 });
-    expect(limiarLiberdade(e.config)).toBe(24);
+    expect(() => definirConfig(e, { dificuldade: 'impossivel' as never })).toThrow(/Dificuldade/);
   });
 
   it('só escravos são vendidos e a lenda nunca é vendida nem dispensada', () => {
@@ -368,8 +370,8 @@ describe('venda, dispensa e marcos', () => {
 
   it('só existe uma lenda viva por ludus', () => {
     const e = novoJogo(67);
-    const primeira = { ...campeaoDe(e), id: 'l1', campeao: false, lenda: true, vitorias: 6, vivo: true };
-    const segunda = { ...campeaoDe(e), id: 'l2', campeao: false, lenda: false, vitorias: 6, vivo: true };
+    const primeira = { ...campeaoDe(e), id: 'l1', campeao: false, lenda: true, vitorias: 9, vivo: true };
+    const segunda = { ...campeaoDe(e), id: 'l2', campeao: false, lenda: false, vitorias: 9, vivo: true };
     e.gladiadores.push(primeira, segunda);
     aplicarMarcos(e, segunda);
     expect(segunda.lenda).toBe(false);
@@ -715,26 +717,72 @@ describe('armeiro mestre: chance por qualidade', () => {
 });
 
 describe('campeão por vitórias, arenas por fama e dificuldade', () => {
-  it('ninguém começa campeão; vira campeão ao atingir as vitórias das regras', () => {
-    const e = novoJogo(90, 'lanista-1', { vitoriasCampeao: 2, vitoriasLenda: 6 });
+  it('no Médio ninguém começa campeão; vira campeão com 3 vitórias, um por vez', () => {
+    const e = novoJogo(90, 'lanista-1', { dificuldade: 'medio' });
     expect(e.gladiadores.some((g) => g.campeao)).toBe(false);
     const g = e.gladiadores[0];
-    g.vitorias = 1;
-    aplicarMarcos(e, g);
-    expect(g.campeao).toBe(false);
     g.vitorias = 2;
     aplicarMarcos(e, g);
+    expect(g.campeao).toBe(false);
+    g.vitorias = 3;
+    aplicarMarcos(e, g);
     expect(g.campeao).toBe(true);
-    // só um campeão por vez
     const outro = { ...g, id: 'outro', campeao: false, vitorias: 5 };
     e.gladiadores.push(outro);
     aplicarMarcos(e, outro);
     expect(outro.campeao).toBe(false);
   });
 
-  it('as regras da partida vêm do novo jogo e recusam valores inválidos', () => {
-    expect(novoJogo(91, 'lanista-1', { vitoriasCampeao: 4, vitoriasLenda: 9 }).config).toEqual({ vitoriasCampeao: 4, vitoriasLenda: 9 });
-    expect(() => novoJogo(92, 'lanista-1', { vitoriasCampeao: 0 })).toThrow(/Campeão/);
+  it('as quatro dificuldades seguem os limiares combinados', () => {
+    expect(REGRAS.facil).toMatchObject({ campeao: 0, lenda: 3, liberdade: null });
+    expect(REGRAS.medio).toMatchObject({ campeao: 3, lenda: 9, liberdade: null });
+    expect(REGRAS.dificil).toMatchObject({ campeao: 6, lenda: 15, liberdade: 30 });
+    expect(REGRAS.extremo).toMatchObject({ campeao: 15, lenda: 45, liberdade: 5 });
+    expect(novoJogo(94, 'lanista-1', { dificuldade: 'facil' }).gladiadores[0].campeao).toBe(true);
+    expect(novoJogo(94, 'lanista-1', { dificuldade: 'extremo' }).gladiadores[0].campeao).toBe(false);
+  });
+
+  it('no Extremo o lenda é libertado após 5 lutas; no Médio nunca', () => {
+    const ex = novoJogo(95, 'lanista-1', { dificuldade: 'extremo' });
+    const g = { ...ex.gladiadores[0], id: 'x', campeao: false, lenda: true, lutasComoLenda: 5 };
+    ex.gladiadores.push(g);
+    expect(aplicarLiberdade(ex, g)).toHaveLength(1);
+    const md = novoJogo(95, 'lanista-1', { dificuldade: 'medio' });
+    const h = { ...md.gladiadores[0], id: 'y', campeao: false, lenda: true, lutasComoLenda: 999 };
+    md.gladiadores.push(h);
+    expect(aplicarLiberdade(md, h)).toHaveLength(0);
+  });
+
+  it('preços de itens, upgrades e gladiadores acompanham a dificuldade', () => {
+    const por = (d: 'facil' | 'medio' | 'dificil' | 'extremo') => {
+      const e = novoJogo(96, 'lanista-1', { dificuldade: d });
+      return { item: precoItem(e, { preco: 100 }), up: custoMelhoria(e, 'palus'), glad: precoRecruta(e, e.mercado[0]) };
+    };
+    const [f, m, d, x] = [por('facil'), por('medio'), por('dificil'), por('extremo')];
+    expect(f.item).toBeLessThan(m.item);
+    expect(m.item).toBeLessThan(d.item);
+    expect(d.item).toBeLessThan(x.item);
+    expect(f.up).toBeLessThan(m.up);
+    expect(x.up).toBeGreaterThan(d.up);
+    expect(f.glad).toBeLessThanOrEqual(m.glad);
+    expect(x.glad).toBeGreaterThan(m.glad);
+  });
+
+  it('rivais mais fortes nas dificuldades altas', () => {
+    const p = arenaPorId('coliseu');
+    expect(multiplicadorArena(p, 'facil')).toBeLessThan(multiplicadorArena(p, 'medio'));
+    expect(multiplicadorArena(p, 'dificil')).toBeGreaterThan(multiplicadorArena(p, 'medio'));
+    expect(multiplicadorArena(p, 'extremo')).toBeGreaterThan(multiplicadorArena(p, 'dificil'));
+  });
+
+  it('pular a luta tira 10% do ouro ganho na vitória e nada na derrota', () => {
+    const e = novoJogo(97);
+    const base = { ouro: 50 } as never;
+    const antes = e.ouro;
+    expect(pularLuta(e, { vitoriaA: true, ouro: 50 } as never)).toBe(5);
+    expect(e.ouro).toBe(antes - 5);
+    expect(pularLuta(e, { vitoriaA: false, ouro: 50 } as never)).toBe(0);
+    void base;
   });
 
   it('Cápua e Coliseu só abrem com batalhas (vitórias ou não); Pompeia é livre', () => {
