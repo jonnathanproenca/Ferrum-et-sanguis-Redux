@@ -24,10 +24,10 @@ function taxa(dif: Dificuldade, passo: number, p: number): number {
   return (w / tot) * 100;
 }
 const OFFSET: Record<Dificuldade, number> = { facil: -1, medio: 0, dificil: 0, extremo: 1 };
-const ALVO: Record<Dificuldade, number> = { facil: 85, medio: 70, dificil: 60, extremo: 62 };
-const FINAL: Record<Dificuldade, number> = { facil: 90, medio: 75, dificil: 60, extremo: 50 };
+const ALVO: Record<Dificuldade, number> = { facil: 85, medio: 70, dificil: 55, extremo: 62 };
+const FINAL: Record<Dificuldade, number> = { facil: 90, medio: 75, dificil: 55, extremo: 50 };
 const saida: Record<string, number[]> = {};
-for (const dif of ['facil', 'medio', 'dificil', 'extremo'] as Dificuldade[]) {
+for (const dif of (process.argv[3]?.split(',') ?? ['facil', 'medio', 'dificil', 'extremo']) as Dificuldade[]) {
   const mults: number[] = [];
   for (let i = 0; i < PASSOS.length; i++) {
     const alvo = i === 9 ? FINAL[dif] : ALVO[dif];

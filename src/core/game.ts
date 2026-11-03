@@ -230,7 +230,7 @@ export const REGRAS: Record<Dificuldade, RegrasDificuldade> = {
     resumo: 'Já começa com campeão. Lenda com 3 vitórias. Nunca é libertado. Preços −20%, rivais mais fracos.' },
   medio: { nome: 'Médio', campeao: 3, lenda: 9, liberdade: null, precos: 1, arenaBase: 1, arenaFator: 1, campReq: 1, campMult: [0.6, 0.89, 1.03, 1.12, 1.12, 1.31, 1.21, 1.27, 1.45, 1.18],
     resumo: 'Campeão com 3 vitórias, lenda com 9. Nunca é libertado. Preços e rivais padrão.' },
-  dificil: { nome: 'Difícil', campeao: 6, lenda: 15, liberdade: 30, precos: 1.25, arenaBase: 1.05, arenaFator: 1.15, campReq: 1.6, campMult: [0.65, 0.94, 1.06, 1.14, 1.17, 1.35, 1.24, 1.29, 1.47, 1.22],
+  dificil: { nome: 'Difícil', campeao: 6, lenda: 15, liberdade: 30, precos: 1.25, arenaBase: 1.05, arenaFator: 1.15, campReq: 1.6, campMult: [0.66, 0.95, 1.06, 1.15, 1.18, 1.38, 1.25, 1.31, 1.48, 1.24],
     resumo: 'Campeão com 6 vitórias, lenda com 15. Libertado após 30 lutas como lenda. Preços +25%, rivais mais fortes.' },
   extremo: { nome: 'Extremo', campeao: 15, lenda: 45, liberdade: 5, precos: 1.6, arenaBase: 1.1, arenaFator: 1.3, campReq: 2.4, campMult: [1.03, 1.21, 1.37, 1.25, 1.39, 1.45, 1.41, 1.38, 1.64, 1.25],
     resumo: 'Campeão com 15 vitórias, lenda com 45. Libertado após só 5 lutas como lenda. Preços +60%, rivais brutais.' },
